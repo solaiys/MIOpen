@@ -277,6 +277,7 @@ pipeline {
         Tensile_setup = " -DMIOPEN_TEST_MIOTENSILE=ON -DMIOPEN_USE_MIOPENTENSILE=ON -DMIOPEN_USE_ROCBLAS=OFF"
     }
     stages{
+		def Static_checks(){
         stage("Static checks"){
             when { expression { params.STATIC_CHECKS && !params.DISABLE_ALL_STAGES } }
             parallel{
@@ -319,6 +320,8 @@ pipeline {
                 }
             }
         }
+		}
+		Static_checks()
         stage("Smoke Fp32"){
             when { expression { params.SMOKE_FP32_AUX1 && !params.DISABLE_ALL_STAGES } }
             environment{
@@ -677,6 +680,7 @@ pipeline {
             }
         }
 
+		def MIOpenTensiles(){
         stage("MIOpenTensile"){
             when { expression { params.MIOPENTENSILE && !params.DISABLE_ALL_STAGES } }
             environment{
@@ -837,6 +841,8 @@ pipeline {
                 }
             }
         }
+		}
+		MIOpenTensiles()
         stage("Packages"){
             when { expression { params.PACKAGES && !params.DISABLE_ALL_STAGES } }
             parallel {
