@@ -100,8 +100,7 @@ def cmake_build(Map conf=[:]){
         archiveArtifacts artifacts: "build/*.deb", allowEmptyArchive: true, fingerprint: true
     }
 }
-def MIOpenTensiles(){
-        stage("MIOpenTensile"){
+def MIOpenTensiles1(){
             when { expression { params.MIOPENTENSILE && !params.DISABLE_ALL_STAGES } }
             environment{
                 Tensile_version = "default"
@@ -180,8 +179,9 @@ def MIOpenTensiles(){
                     }
                 }
             }
-        }
-        stage("MIOpenTensile Latest"){
+}
+def MIOpenTensiles2(){
+
             when { expression { params.MIOPENTENSILE_LATEST && !params.DISABLE_ALL_STAGES  } }
             environment{
                 Tensile_version = "latest"
@@ -260,7 +260,6 @@ def MIOpenTensiles(){
                     }
                 }
             }
-        }
 		}
 
 def buildHipClangJob(Map conf=[:]){
@@ -377,7 +376,6 @@ def buildHipClangJobAndReboot(Map conf=[:]){
 ///   * "Vega" (gfx906 or gfx900) is the default and usually not specified.
 
 	def Static_checks(){
-        stage("Static checks"){
             when { expression { params.STATIC_CHECKS && !params.DISABLE_ALL_STAGES } }
             parallel{
                 stage('Hip Tidy') {
@@ -418,7 +416,6 @@ def buildHipClangJobAndReboot(Map conf=[:]){
                     }
                 }
             }
-        }
 	}
 
 pipeline {
@@ -483,8 +480,9 @@ pipeline {
         Tensile_setup = " -DMIOPEN_TEST_MIOTENSILE=ON -DMIOPEN_USE_MIOPENTENSILE=ON -DMIOPEN_USE_ROCBLAS=OFF"
     }
     stages{
-		
-		Static_checks()
+		stage("Static checks"){
+			Static_checks()
+		}
         stage("Smoke Fp32"){
             when { expression { params.SMOKE_FP32_AUX1 && !params.DISABLE_ALL_STAGES } }
             environment{
@@ -842,8 +840,12 @@ pipeline {
                 }
             }
         }
-		
-		MIOpenTensiles()
+		stage("MIOpenTensile"){
+			MIOpenTensiles1()
+		}
+		stage("MIOpenTensile Latest"){
+			MIOpenTensiles2()
+		}
         stage("Packages"){
             when { expression { params.PACKAGES && !params.DISABLE_ALL_STAGES } }
             parallel {
