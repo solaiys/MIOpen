@@ -100,167 +100,6 @@ def cmake_build(Map conf=[:]){
         archiveArtifacts artifacts: "build/*.deb", allowEmptyArchive: true, fingerprint: true
     }
 }
-def MIOpenTensiles1(){
-            when { expression { params.MIOPENTENSILE && !params.DISABLE_ALL_STAGES } }
-            environment{
-                Tensile_version = "default"
-            }
-            parallel{
-                stage('Fp32 Hip Tensile All Vega20') {
-                    agent{ label rocmnode("vega20") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test, build_env: Tensile_build_env, test_flags: ' --verbose ', gpu_arch:"gfx906:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-                stage('Fp16 Hip Tensile All Vega20') {
-                    agent{ label rocmnode("vega20") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test + Fp16_flags, build_env: Tensile_build_env, test_flags: ' --verbose ', gpu_arch:"gfx906:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-                stage('Bf16 Hip Tensile All Vega20') {
-                    agent{ label rocmnode("vega20") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test + extra_log_env + Bf16_flags, build_env: Tensile_build_env, test_flags: ' --verbose ', gpu_arch:"gfx906:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-                stage('Int8 Hip Tensile All Vega20') {
-                    agent{ label rocmnode("vega20") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test + extra_log_env + Int8_flags, build_env: Tensile_build_env, test_flags: ' --verbose ', gpu_arch:"gfx906:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-                stage('Fp32 Hip Tensile All gfx908') {
-                    agent{ label rocmnode("gfx908") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test + extra_log_env, build_env: Tensile_build_env + extra_log_env, test_flags: ' --verbose ', gpu_arch: "gfx908:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-                stage('Fp16 Hip Tensile All gfx908') {
-                    agent{ label rocmnode("gfx908") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test + extra_log_env + Fp16_flags, build_env: Tensile_build_env + extra_log_env, test_flags: ' --verbose ', gpu_arch: "gfx908:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-                stage('Bf16 Hip Tensile All gfx908') {
-                    agent{ label rocmnode("gfx908") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test + extra_log_env + Bf16_flags, build_env: Tensile_build_env + extra_log_env, test_flags: ' --verbose ', gpu_arch: "gfx908:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-                stage('Int8 Hip Tensile All gfx908') {
-                    agent{ label rocmnode("gfx908") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test + extra_log_env + Int8_flags, build_env: Tensile_build_env + extra_log_env, test_flags: ' --verbose ', gpu_arch: "gfx908:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-                stage('Fp32 Hip Tensile All gfx90a') {
-                    agent{ label rocmnode("gfx90a") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test + extra_log_env, build_env: Tensile_build_env + extra_log_env, test_flags: ' --verbose ', gpu_arch: "gfx90a:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-                stage('Fp16 Hip Tensile All gfx90a') {
-                    agent{ label rocmnode("gfx90a") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test + extra_log_env + Fp16_flags, build_env: Tensile_build_env + extra_log_env, test_flags: ' --verbose ', gpu_arch: "gfx90a:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-                stage('Bf16 Hip Tensile All gfx90a') {
-                    agent{ label rocmnode("gfx90a") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test + extra_log_env + Bf16_flags, build_env: Tensile_build_env + extra_log_env, test_flags: ' --verbose ', gpu_arch: "gfx90a:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-                stage('Int8 Hip Tensile All gfx90a') {
-                    agent{ label rocmnode("gfx90a") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test + extra_log_env + Int8_flags, build_env: Tensile_build_env + extra_log_env, test_flags: ' --verbose ', gpu_arch: "gfx90a:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-            }
-}
-def MIOpenTensiles2(){
-
-            when { expression { params.MIOPENTENSILE_LATEST && !params.DISABLE_ALL_STAGES  } }
-            environment{
-                Tensile_version = "latest"
-            }
-            parallel{
-                stage('Fp32 Hip Tensile-Latest All Vega20') {
-                    agent{ label rocmnode("vega20") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test, build_env: Tensile_build_env, test_flags: ' --verbose ', gpu_arch:"gfx906:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-                stage('Fp16 Hip Tensile-Latest All Vega20') {
-                    agent{ label rocmnode("vega20") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test + Fp16_flags, build_env: Tensile_build_env, test_flags: ' --verbose ', gpu_arch:"gfx906:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-                stage('Bf16 Hip Tensile-Latest All Vega20') {
-                    agent{ label rocmnode("vega20") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test + extra_log_env + Bf16_flags, build_env: Tensile_build_env, test_flags: ' --verbose ', gpu_arch:"gfx906:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-                stage('Int8 Hip Tensile-Latest All Vega20') {
-                    agent{ label rocmnode("vega20") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test + extra_log_env + Int8_flags, build_env: Tensile_build_env, test_flags: ' --verbose ', gpu_arch:"gfx906:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-                stage('Fp32 Hip Tensile-Latest All gfx908') {
-                    agent{ label rocmnode("gfx908") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test + extra_log_env, build_env: Tensile_build_env + extra_log_env, test_flags: ' --verbose ', gpu_arch: "gfx908:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-                stage('Fp16 Hip Tensile-Latest All gfx908') {
-                    agent{ label rocmnode("gfx908") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test + extra_log_env + Fp16_flags, build_env: Tensile_build_env + extra_log_env, test_flags: ' --verbose ', gpu_arch: "gfx908:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-                stage('Bf16 Hip Tensile-Latest All gfx908') {
-                    agent{ label rocmnode("gfx908") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test + extra_log_env + Bf16_flags, build_env: Tensile_build_env + extra_log_env, test_flags: ' --verbose ', gpu_arch: "gfx908:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-                stage('Int8 Hip Tensile-Latest All gfx908') {
-                    agent{ label rocmnode("gfx908") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test + extra_log_env + Int8_flags, build_env: Tensile_build_env + extra_log_env, test_flags: ' --verbose ', gpu_arch: "gfx908:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-                stage('Fp32 Hip Tensile-Latest All gfx90a') {
-                    agent{ label rocmnode("gfx90a") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test + extra_log_env, build_env: Tensile_build_env + extra_log_env, test_flags: ' --verbose ', gpu_arch: "gfx90a:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-                stage('Fp16 Hip Tensile-Latest All gfx90a') {
-                    agent{ label rocmnode("gfx90a") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test + extra_log_env + Fp16_flags, build_env: Tensile_build_env + extra_log_env, test_flags: ' --verbose ', gpu_arch: "gfx90a:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-                stage('Bf16 Hip Tensile-Latest All gfx90a') {
-                    agent{ label rocmnode("gfx90a") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test + extra_log_env + Bf16_flags, build_env: Tensile_build_env + extra_log_env, test_flags: ' --verbose ', gpu_arch: "gfx90a:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-                stage('Int8 Hip Tensile-Latest All gfx90a') {
-                    agent{ label rocmnode("gfx90a") }
-                    steps{
-                        buildHipClangJobAndReboot( setup_flags: Tensile_setup + Full_test + extra_log_env + Int8_flags, build_env: Tensile_build_env + extra_log_env, test_flags: ' --verbose ', gpu_arch: "gfx90a:xnack-", miotensile_version: Tensile_version, target_id: "ON")
-                    }
-                }
-            }
-		}
 
 def buildHipClangJob(Map conf=[:]){
         show_node_info()
@@ -375,48 +214,6 @@ def buildHipClangJobAndReboot(Map conf=[:]){
 /// Target := { gfx908 | gfx90a | Vega20 | Vega10 | Vega* | gfx1030 }
 ///   * "Vega" (gfx906 or gfx900) is the default and usually not specified.
 
-	def Static_checks(){
-            when { expression { params.STATIC_CHECKS && !params.DISABLE_ALL_STAGES } }
-            parallel{
-                stage('Hip Tidy') {
-                    agent{  label rocmnode("nogpu") }
-                    environment{
-                        setup_cmd = "CXX='/opt/rocm/llvm/bin/clang++' cmake -DMIOPEN_BACKEND=HIP -DBUILD_DEV=On .. "
-                        build_cmd = "make -j\$(nproc) -k analyze"
-                    }
-                    steps{
-                        buildHipClangJobAndReboot(setup_cmd: setup_cmd, build_cmd: build_cmd, no_reboot:true)
-                    }
-                }
-                stage('OpenCL Tidy') {
-                    agent{  label rocmnode("nogpu") }
-                    environment{
-                        setup_cmd = "cmake -DMIOPEN_BACKEND=OpenCL -DBUILD_DEV=On .."
-                        build_cmd = "make -j\$(nproc) -k analyze"
-                    }
-                    steps{
-                        buildHipClangJobAndReboot(setup_cmd: setup_cmd, build_cmd: build_cmd, no_reboot:true)
-                    }
-                }
-                stage('Clang Format') {
-                    agent{ label rocmnode("nogpu") }
-                    environment{
-                        execute_cmd = "find . -iname \'*.h\' \
-                                -o -iname \'*.hpp\' \
-                                -o -iname \'*.cpp\' \
-                                -o -iname \'*.h.in\' \
-                                -o -iname \'*.hpp.in\' \
-                                -o -iname \'*.cpp.in\' \
-                                -o -iname \'*.cl\' \
-                                | grep -v 'build/' \
-                                | xargs -n 1 -P 1 -I{} -t sh -c \'clang-format-10 -style=file {} | diff - {}\'"
-                    }
-                    steps{
-                        buildHipClangJobAndReboot(setup_cmd: "", build_cmd: "", execute_cmd: execute_cmd, no_reboot:true)
-                    }
-                }
-            }
-	}
 
 pipeline {
     agent none
@@ -480,9 +277,48 @@ pipeline {
         Tensile_setup = " -DMIOPEN_TEST_MIOTENSILE=ON -DMIOPEN_USE_MIOPENTENSILE=ON -DMIOPEN_USE_ROCBLAS=OFF"
     }
     stages{
-		stage("Static checks"){
-			Static_checks()
-		}
+        stage("Static checks"){
+            when { expression { params.STATIC_CHECKS && !params.DISABLE_ALL_STAGES } }
+            parallel{
+                stage('Hip Tidy') {
+                    agent{  label rocmnode("nogpu") }
+                    environment{
+                        setup_cmd = "CXX='/opt/rocm/llvm/bin/clang++' cmake -DMIOPEN_BACKEND=HIP -DBUILD_DEV=On .. "
+                        build_cmd = "make -j\$(nproc) -k analyze"
+                    }
+                    steps{
+                        buildHipClangJobAndReboot(setup_cmd: setup_cmd, build_cmd: build_cmd, no_reboot:true)
+                    }
+                }
+                stage('OpenCL Tidy') {
+                    agent{  label rocmnode("nogpu") }
+                    environment{
+                        setup_cmd = "cmake -DMIOPEN_BACKEND=OpenCL -DBUILD_DEV=On .."
+                        build_cmd = "make -j\$(nproc) -k analyze"
+                    }
+                    steps{
+                        buildHipClangJobAndReboot(setup_cmd: setup_cmd, build_cmd: build_cmd, no_reboot:true)
+                    }
+                }
+                stage('Clang Format') {
+                    agent{ label rocmnode("nogpu") }
+                    environment{
+                        execute_cmd = "find . -iname \'*.h\' \
+                                -o -iname \'*.hpp\' \
+                                -o -iname \'*.cpp\' \
+                                -o -iname \'*.h.in\' \
+                                -o -iname \'*.hpp.in\' \
+                                -o -iname \'*.cpp.in\' \
+                                -o -iname \'*.cl\' \
+                                | grep -v 'build/' \
+                                | xargs -n 1 -P 1 -I{} -t sh -c \'clang-format-10 -style=file {} | diff - {}\'"
+                    }
+                    steps{
+                        buildHipClangJobAndReboot(setup_cmd: "", build_cmd: "", execute_cmd: execute_cmd, no_reboot:true)
+                    }
+                }
+            }
+        }
         stage("Smoke Fp32"){
             when { expression { params.SMOKE_FP32_AUX1 && !params.DISABLE_ALL_STAGES } }
             environment{
@@ -840,12 +676,6 @@ pipeline {
                 }
             }
         }
-		stage("MIOpenTensile"){
-			MIOpenTensiles1()
-		}
-		stage("MIOpenTensile Latest"){
-			MIOpenTensiles2()
-		}
         stage("Packages"){
             when { expression { params.PACKAGES && !params.DISABLE_ALL_STAGES } }
             parallel {
