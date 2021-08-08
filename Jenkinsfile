@@ -721,7 +721,7 @@ pipeline {
                 }
             }
         }
-		stage(MIOpenTensile Part2){
+		stage("MIOpenTensile Part2"){
 			when { expression { params.MIOPENTENSILE && !params.DISABLE_ALL_STAGES } }
             environment{
                 Tensile_version = "default"
