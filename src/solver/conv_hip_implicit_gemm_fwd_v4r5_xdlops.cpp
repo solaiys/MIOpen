@@ -994,6 +994,7 @@ ConvSolution ConvHipImplicitGemmForwardV4R5Xdlops::GetSolution(
 
 bool ConvHipImplicitGemmForwardV4R5Xdlops::IsApplicable(const ConvolutionContext& ctx) const
 {
+    return false; // disable XDLOPS
     if(miopen::IsDisabled(MIOPEN_DEBUG_CONV_IMPLICIT_GEMM_HIP_FWD_V4R5_XDLOPS{}))
         return false;
 

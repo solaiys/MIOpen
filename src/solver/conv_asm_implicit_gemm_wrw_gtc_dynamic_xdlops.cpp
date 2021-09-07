@@ -807,6 +807,7 @@ size_t ConvAsmImplicitGemmGTCDynamicWrwXdlops::GetWorkspaceSize(const Convolutio
 
 bool ConvAsmImplicitGemmGTCDynamicWrwXdlops::IsApplicable(const ConvolutionContext& ctx) const
 {
+    return false; // disable XDLOPS
     if(miopen::IsDisabled(MIOPEN_DEBUG_CONV_IMPLICIT_GEMM_ASM_WRW_GTC_XDLOPS{}))
         return false;
 

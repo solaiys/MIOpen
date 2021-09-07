@@ -52,6 +52,7 @@ std::string GetOperation() { return "conv2d"; }
 
 bool ConvMlirIgemmFwdXdlops::IsApplicable(const ConvolutionContext& ctx) const
 {
+    return false; // disable XDLOPS
 #if MIOPEN_USE_MLIR
     if(miopen::IsDisabled(MIOPEN_DEBUG_CONV_MLIR_IGEMM_FWD_XDLOPS{}))
         return false;
