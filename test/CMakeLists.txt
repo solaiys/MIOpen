@@ -690,8 +690,7 @@ set(IMPLICITGEMM_TESTING_ENV
 
 if(WORKAROUND_ISSUE_936 AND MIOPEN_TEST_HALF)
     LIST(APPEND IMPLICITGEMM_TESTING_ENV MIOPEN_DEBUG_CONV_IMPLICIT_GEMM_HIP_FWD_V4R1=0 MIOPEN_FIND_MODE=normal)
-    LIST(APPEND IMPLICITGEMM_ARGS --disable-forward --disable-backward-data)
-    #Afther fix need to remove '| grep -v "cannot be executed due to incorrect params"'
+    # After fix need to remove '| grep -v "cannot be executed due to incorrect params"'
 endif()
 add_custom_test(test_conv_for_implicit_gemm SKIP_UNLESS_ALL BF16_ENABLED HALF_ENABLED GFX1030_ENABLED
 COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose   --input 64  16  28  28  --weights 192 16  3 3 --pads_strides_dilations 0 0 2 2 1 1 | grep -v "cannot be executed due to incorrect params"
