@@ -1250,7 +1250,11 @@ int ConvDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
             {
                 if(is_fwd || is_wrw)
                     in.data[i] =
+#if 0
                         Data_scale * RAN_GEN<Tgpu>(static_cast<Tgpu>(0.0), static_cast<Tgpu>(1.0));
+#else
+                        std::rand() % 10 - 5;
+#endif
                 else /// \ref move_rand
                     GET_RAND();
             }
@@ -1261,7 +1265,11 @@ int ConvDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
             for(int i = 0; i < out_sz; i++)
                 if(is_bwd || is_wrw)
                     dout.data[i] =
+#if 0
                         Data_scale * RAN_GEN<Tgpu>(static_cast<Tgpu>(0.0), static_cast<Tgpu>(1.0));
+#else
+                        std::rand() % 10 - 5;
+#endif
                 else /// \ref move_rand
                     GET_RAND();
         }
@@ -1297,7 +1305,11 @@ int ConvDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
         {
             for(int i = 0; i < wei_sz; i++)
                 if(is_fwd || is_bwd)
+#if 0
                     wei.data[i] = Data_scale * detail::RanGenWeights<Tgpu>();
+#else
+                    wei.data[i] = std::rand() % 10 - 5;
+#endif
                 else /// \ref move_rand
                     GET_RAND();
         }

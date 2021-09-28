@@ -584,9 +584,11 @@ bool ConvAsmImplicitGemmGTCDynamicFwdXdlopsNHWC::IsApplicable(const ConvolutionC
     if(!ctx.IsLayoutNHWC())
         return false;
 
+#if 0
     const auto target = ctx.GetStream().GetTargetProperties();
     if(target.Xnack() && *target.Xnack())
         return false; // NOLINT (readability-simplify-boolean-expr)
+#endif
 
     return true;
 }
