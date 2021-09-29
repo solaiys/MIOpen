@@ -93,7 +93,7 @@ if(NOT (MIOPEN_TEST_VEGA OR MIOPEN_TEST_GFX908 OR MIOPEN_TEST_GFX90a OR MIOPEN_T
         )
         if(ROCMINFO_OUTPUT MATCHES "no GPU devices")
             message(WARNING "ROCk module is NOT loaded, possibly no GPU devices")
-            set(MIOPEN_NO_GPU TRUE)         
+            set(MIOPEN_NO_GPU TRUE)
         elseif (NOT ROCMINFO_EXIT_STATUS EQUAL 0)
             message(WARNING "ROCMINFO FAILED, GPU TYPE UNKNOWN. Manually set respective MIOPEN_TEST_GFX* CMake variable to specify target GPU for testing.")
             set(MIOPEN_TEST_GPU_DETECTION_FAILED TRUE)
@@ -185,7 +185,7 @@ else()
 endif()
 
 if (MIOPEN_NO_GPU)
-    set(SKIP_ALL_EXCEPT_TESTS test_include_inliner test_kernel_build_params test_lstm test_lstm_dropout 
+    set(SKIP_ALL_EXCEPT_TESTS test_include_inliner test_kernel_build_params test_lstm test_lstm_dropout
             test_test_errors test_type_name test_tensor_test test_sqlite_perfdb test_sequences
             test_pooling3d test_perfdb)
 endif()
@@ -206,6 +206,8 @@ endif()
 message(STATUS "SKIP_TESTS: ${SKIP_TESTS}")
 message(STATUS "SKIP_ALL_EXCEPT_TESTS: ${SKIP_ALL_EXCEPT_TESTS}")
 
+# This is to skip all executable tests
+set(SKIP_ALL_EXCEPT_TESTS no_such_test)
 
 function(add_test_command NAME EXE)
     # Restrict the use of SKIP_ALL_EXCEPT_TESTS list in the Int8, BF16 and MIOpenTensile tests
@@ -539,6 +541,10 @@ function(add_custom_test NAME)
         endif()
         rate_added_test(${NAME})
     else()
+        set_tests_properties(${NAME} PROPERTIES DISABLED On)
+    endif()
+    # Skip all custom tests except test_conv_for_implicit_gemm
+    if(NOT (${NAME} MATCHES "test_conv_for_implicit_gemm"))
         set_tests_properties(${NAME} PROPERTIES DISABLED On)
     endif()
 endfunction()
@@ -1192,7 +1198,7 @@ COMMAND ${DYNAMIC_IMPLICITGEMM_BWD_ENVS_XDLOPS} $<TARGET_FILE:test_conv2d> ${MIO
 COMMAND ${DYNAMIC_IMPLICITGEMM_BWD_ENVS_XDLOPS} $<TARGET_FILE:test_conv2d> ${MIOPEN_TEST_FLOAT_ARG} --verbose --input  8  128 56 56 --weights 128 16 3 3 --pads_strides_dilations 1 1 1 1 1 1 --group-count 8 --disable-forward --disable-backward-weights
 )
 
-add_custom_test(test_conv_igemm_dynamic_xdlops_bwd_float SKIP_UNLESS_ALL HALF_DISABLED FLOAT_ENABLED GFX908_ENABLED VEGA_DISABLED 
+add_custom_test(test_conv_igemm_dynamic_xdlops_bwd_float SKIP_UNLESS_ALL HALF_DISABLED FLOAT_ENABLED GFX908_ENABLED VEGA_DISABLED
 COMMAND ${DYNAMIC_IMPLICITGEMM_BWD_ENVS_XDLOPS} $<TARGET_FILE:test_conv2d> ${MIOPEN_TEST_FLOAT_ARG} --verbose --input  4  512 128 128 --weights 12  512  1 1 --pads_strides_dilations 0 0 1 1 1 1 --disable-forward --disable-backward-weights
 )
 
