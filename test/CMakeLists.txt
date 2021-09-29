@@ -326,9 +326,6 @@ set(LONG_TESTS
     test_soft_max
     test_lrn_test
     test_conv_for_implicit_gemm
-    test_conv_for_implicit_gemm_1
-    test_conv_for_implicit_gemm_2
-    test_conv_for_implicit_gemm_3
     test_immed_conv3d
     test_conv3d_extra
     test_conv_3d
@@ -549,7 +546,7 @@ function(add_custom_test NAME)
         set_tests_properties(${NAME} PROPERTIES DISABLED On)
     endif()
     # Skip all custom tests except test_conv_for_implicit_gemm
-    if(NOT (${NAME} MATCHES "test_conv_for_implicit_gemm.*"))
+    if(NOT (${NAME} MATCHES "test_conv_for_implicit_gemm"))
         set_tests_properties(${NAME} PROPERTIES DISABLED On)
     endif()
 endfunction()
@@ -739,8 +736,6 @@ COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_AR
 COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_1188_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 128 28 28 --weights 16 128 1 1 --pads_strides_dilations 0 0 1 1 1 1
 COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_1188_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 128 14 14 --weights 16 128 1 1 --pads_strides_dilations 0 0 1 1 1 1
 COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 128 7 7 --weights 16 128 1 1 --pads_strides_dilations 0 0 1 1 1 1
-)
-add_custom_test(test_conv_for_implicit_gemm_1 SKIP_UNLESS_ALL BF16_ENABLED HALF_ENABLED GFX1030_ENABLED
 COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 16 64 56 56 --weights 256 64 1 1 --pads_strides_dilations 0 0 1 1 1 1
 COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 16 64 56 56 --weights 64 64 1 1 --pads_strides_dilations 0 0 1 1 1 1
 COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 16 64 73 73 --weights 80 64 1 1 --pads_strides_dilations 0 0 1 1 1 1
@@ -761,8 +756,6 @@ COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_AR
 COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 192 28 28 --weights 16 192 1 1 --pads_strides_dilations 0 0 1 1 1 1
 COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 192 28 28 --weights 32 192 1 1 --pads_strides_dilations 0 0 1 1 1 1
 COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 192 28 28 --weights 64 192 1 1 --pads_strides_dilations 0 0 1 1 1 1
-)
-add_custom_test(test_conv_for_implicit_gemm_2 SKIP_UNLESS_ALL BF16_ENABLED HALF_ENABLED GFX1030_ENABLED
 COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 192 28 28 --weights 96 192 1 1 --pads_strides_dilations 0 0 1 1 1 1
 COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 256 35 35 --weights 48 256 1 1 --pads_strides_dilations 0 0 1 1 1 1
 COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 256 35 35 --weights 64 256 1 1 --pads_strides_dilations 0 0 1 1 1 1
@@ -783,8 +776,6 @@ COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_AR
 COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 480 14 14 --weights 96 480 1 1 --pads_strides_dilations 0 0 1 1 1 1
 COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 28 28 --weights 128 512 1 1 --pads_strides_dilations 0 0 1 1 1 1
 COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 28 28 --weights 256 512 1 1 --pads_strides_dilations 0 0 2 2 1 1
-)
-add_custom_test(test_conv_for_implicit_gemm_3 SKIP_UNLESS_ALL BF16_ENABLED HALF_ENABLED GFX1030_ENABLED
 COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 14 14 --weights 112 512 1 1 --pads_strides_dilations 0 0 1 1 1 1
 COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 14 14 --weights 128 512 1 1 --pads_strides_dilations 0 0 1 1 1 1
 COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 14 14 --weights 144 512 1 1 --pads_strides_dilations 0 0 1 1 1 1
