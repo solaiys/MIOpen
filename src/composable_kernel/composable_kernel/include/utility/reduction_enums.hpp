@@ -23,18 +23,44 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-.include "Conv_Winograd_v21_1_2_metadata.inc"
+#ifndef CK_REDUCTION_ENUMS_HPP
+#define CK_REDUCTION_ENUMS_HPP
 
-KERNEL_PROLOG fp16_dot2_edc_dilation2_group
+namespace ck {
 
-.if (.amdgcn.gfx_generation_number == 9)
-    .if (.amdgcn.gfx_generation_stepping == 10)
-        .include "Conv_Winograd_v21_1_2_gfx90a_fp16_dot2_edc_dilation2_group.inc"
-    .else
-        .include "Conv_Winograd_v21_1_2_gfx9_fp16_dot2_edc_dilation2_group.inc"
-    .endif
-.elseif (.amdgcn.gfx_generation_number == 10)
-    .include "Conv_Winograd_v21_1_2_gfx10_fp16_dot2_edc_dilation2_group.inc"
-.endif
+enum class ReduceTensorOp_t
+{
+    ADD   = 0,
+    MUL   = 1,
+    MIN   = 2,
+    MAX   = 3,
+    AMAX  = 4,
+    AVG   = 5,
+    NORM1 = 6,
+    NORM2 = 7,
+    // MUL_NO_ZEROS = 8,
+};
 
-KERNEL_EPILOG fp16_dot2_edc_dilation2_group
+enum class NanPropagation_t
+{
+    NOT_PROPAGATE_NAN = 0,
+    PROPAGATE_NAN     = 1,
+};
+
+enum class ReduceTensorIndices_t
+{
+    NO_INDICES        = 0,
+    FLATTENED_INDICES = 1,
+};
+
+enum class IndicesType_t
+{
+    INDICES_32BIT = 0,
+    INDICES_64BIT = 1,
+    INDICES_16BIT = 2,
+    INDICES_8BIT  = 3,
+};
+
+}; // end of namespace ck
+
+#endif
