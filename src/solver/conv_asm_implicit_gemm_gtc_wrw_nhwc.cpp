@@ -470,6 +470,8 @@ void PerformanceConfigAsmImplicitGemmGTCWrwXdlopsNHWC::HeuristicInit(const Convo
             if(miopen::IsDisabled(MIOPEN_DEBUG_CONV_IMPLICIT_GEMM_ASM_PK_ATOMIC_ADD_FP16{}))
                 if(ctx.IsFp16() && tensor_b_thread_lengths[3] != 1)
                     vector_store = 1;
+            if(ctx.IsFp16() && tensor_b_thread_lengths[3] == 1)
+                vector_store = 1;
             gemm_k_global_split = occupancy;
         }
     }
@@ -503,6 +505,8 @@ void PerformanceConfigAsmImplicitGemmGTCWrwXdlopsNHWC::HeuristicInit(const Convo
                         if(miopen::IsDisabled(MIOPEN_DEBUG_CONV_IMPLICIT_GEMM_ASM_PK_ATOMIC_ADD_FP16{}))
                             if(ctx.IsFp16() && tensor_b_thread_lengths[3] != 1)
                                 vector_store = 1;
+                        if(ctx.IsFp16() && tensor_b_thread_lengths[3] == 1)
+                            vector_store = 1;
                         gemm_k_global_split = occupancy;
                     }
                     return;
