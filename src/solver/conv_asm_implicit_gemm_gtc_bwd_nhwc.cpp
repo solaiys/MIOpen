@@ -901,18 +901,18 @@ ConvAsmImplicitGemmGTCDynamicBwdXdlopsNHWC::GetWorkspaceSize(const ConvolutionCo
     const auto& y         = ctx.kernel_size_h;
     const auto& x         = ctx.kernel_size_w;
     const auto& group     = ctx.group_counts;
-    const auto isNCHW     = ctx.IsLayoutDefault();
+    const auto is_nchw    = ctx.IsLayoutDefault();
     size_t workspace_size = 0;
-    if(isNCHW)
+    if(is_nchw)
     {
-        TransposeSolution_NHWC2NCHW trans_input(ctx, ctx.out_data_type, n, c, hi, wi);
-        TransposeSolution_NCHW2NHWC trans_weight(ctx,
-                                                 ctx.weights_data_type,
-                                                 k,
-                                                 c / group,
-                                                 y,
-                                                 x); // group * k_per_group as batch for weight
-        TransposeSolution_NCHW2NHWC trans_output(ctx, ctx.in_data_type, n, k, ho, wo);
+        TransposeSolutionNhwc2Default trans_input(ctx, ctx.out_data_type, n, c, hi, wi);
+        TransposeSolutionDefault2Nhwc trans_weight(ctx,
+                                                   ctx.weights_data_type,
+                                                   k,
+                                                   c / group,
+                                                   y,
+                                                   x); // group * k_per_group as batch for weight
+        TransposeSolutionDefault2Nhwc trans_output(ctx, ctx.in_data_type, n, k, ho, wo);
         if(!trans_input.IsSkippable())
             workspace_size += trans_input.GetSize();
         if(!trans_weight.IsSkippable())
@@ -962,7 +962,7 @@ ConvSolution ConvAsmImplicitGemmGTCDynamicBwdXdlopsNHWC::GetSolution(
     const auto isGfx90aFp16altSupport =
         (ctx.GetStream().GetDeviceName() == "gfx90a") && ctx.conv_problem.IsFp16();
 
-    const auto isNCHW = ctx.IsLayoutDefault();
+    const auto is_nchw = ctx.IsLayoutDefault();
 
     result.construction_params.push_back(kernel);
     std::ostringstream options;
@@ -980,10 +980,11 @@ ConvSolution ConvAsmImplicitGemmGTCDynamicBwdXdlopsNHWC::GetSolution(
         std::ostringstream opts_1(options.str(), std::ios_base::ate);
         GenerateClangDefsym(opts_1, "igemm_bwd_fp16_alt_impl", 1);
         result.construction_params[1].comp_options = opts_1.str();
-        msg << ", fp16_alt:" << ctx.conv_problem.GetConv().attribute.gfx90aFp16alt.GetBwd();
+        if(miopen::IsLogging(LoggingLevel::Info2))
+            msg << ", fp16_alt:" << ctx.conv_problem.GetConv().attribute.gfx90aFp16alt.GetBwd();
     }
 
-    if(isNCHW)
+    if(is_nchw)
     {
         const auto& hi    = ctx.out_height;
         const auto& wi    = ctx.out_width;
@@ -996,33 +997,36 @@ ConvSolution ConvAsmImplicitGemmGTCDynamicBwdXdlopsNHWC::GetSolution(
         const auto& x     = ctx.kernel_size_w;
         const auto& group = ctx.group_counts;
 
-        TransposeSolution_NHWC2NCHW trans_input(ctx, ctx.out_data_type, n, c, hi, wi);
-        TransposeSolution_NCHW2NHWC trans_weight(ctx,
-                                                 ctx.weights_data_type,
-                                                 k,
-                                                 c / group,
-                                                 y,
-                                                 x); // group * k_per_group as batch for weight
-        TransposeSolution_NCHW2NHWC trans_output(ctx, ctx.in_data_type, n, k, ho, wo);
+        TransposeSolutionNhwc2Default trans_input(ctx, ctx.out_data_type, n, c, hi, wi);
+        TransposeSolutionDefault2Nhwc trans_weight(ctx,
+                                                   ctx.weights_data_type,
+                                                   k,
+                                                   c / group,
+                                                   y,
+                                                   x); // group * k_per_group as batch for weight
+        TransposeSolutionDefault2Nhwc trans_output(ctx, ctx.in_data_type, n, k, ho, wo);
 
         if(!trans_input.IsSkippable())
         {
             result.construction_params.push_back(trans_input.GetKernel());
-            msg << ", inp trans:" << trans_input.GetKernelName();
+            if(miopen::IsLogging(LoggingLevel::Info2))
+                msg << ", inp trans:" << trans_input.GetKernelName();
         }
         if(!trans_weight.IsSkippable())
         {
             result.construction_params.push_back(trans_weight.GetKernel());
-            msg << ", wei trans:" << trans_weight.GetKernelName();
+            if(miopen::IsLogging(LoggingLevel::Info2))
+                msg << ", wei trans:" << trans_weight.GetKernelName();
         }
         if(!trans_output.IsSkippable())
         {
             result.construction_params.push_back(trans_output.GetKernel());
-            msg << ", out trans:" << trans_output.GetKernelName();
+            if(miopen::IsLogging(LoggingLevel::Info2))
+                msg << ", out trans:" << trans_output.GetKernelName();
         }
     }
 
-    MIOPEN_LOG_I2("ConvAsmImplicitGemmGTCDynamicBwdXdlopsNHWC: " + config.ToString() + msg.str());
+    MIOPEN_LOG_I2(SolverDbId(*this) << ": " << config.ToString() << msg.str());
 
     result.invoker_factory =
         conv::MakeImplGemmDynamicBackwardDataXdlopsNHWCInvokerFactory(ctx, config);
