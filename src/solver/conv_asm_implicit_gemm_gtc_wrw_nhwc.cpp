@@ -710,8 +710,8 @@ bool PerformanceConfigAsmImplicitGemmGTCWrwXdlopsNHWC::IsValid(const Convolution
     if(IsDefaultConstructed())
         return false;
 
-    if(!((ctx.IsFp16() && precision == miopenHalf) || (ctx.IsFp32() && precision == miopenFloat) || (ctx.IsBfp16() && precision == miopenBFloat16)))
-        return false;
+    // if(!((ctx.IsFp16() && precision == miopenHalf) || (ctx.IsFp32() && precision == miopenFloat) || (ctx.IsBfp16() && precision == miopenBFloat16)))
+    //     return false;
 
     if(miopen::IsDisabled(MIOPEN_DEBUG_CONV_IMPLICIT_GEMM_ASM_PK_ATOMIC_ADD_FP16{}))
         if(ctx.IsFp16() && tensor_b_thread_lengths[3] != 1 && gemm_k_global_split != 0 && vector_store != 1)

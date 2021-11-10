@@ -126,7 +126,7 @@ bool PerformanceConfigAsmImplicitGemmGTC::operator==(
     // clang-format off
     return direction == other.direction
         && tensor_layout == other.tensor_layout
-        && precision == other.precision
+        // && precision == other.precision
         && nxb == other.nxb
         && nxe == other.nxe
         && gemm_m_per_block == other.gemm_m_per_block
