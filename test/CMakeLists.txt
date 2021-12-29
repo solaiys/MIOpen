@@ -784,14 +784,23 @@ set(IMPLICITGEMM_TESTING_ENV
 # may skip non-dynamic iGemm solvers and test would report false failure.
 # That is why NORMAL Find mode must be enforced (see above).
 
-if(WORKAROUND_ISSUE_936)
-    # FIXME After fix need to remove '| grep -v "cannot be executed due to incorrect params"'
-    set(WA_ISSUE_936_ENV_REAL MIOPEN_DEBUG_CONV_IMPLICIT_GEMM_HIP_FWD_V4R1=0)
-else()
-    set(WA_ISSUE_936_ENV_REAL "")
-endif()
+set(CONV_F --disable-backward-data --disable-backward-weights)
+set(CONV_B --disable-forward --disable-backward-weights)
+set(CONV_W --disable-forward --disable-backward-data)
+set(CONV_FB --disable-backward-weights)
+set(CONV_FW --disable-backward-data)
+set(CONV_BW --disable-forward)
+set(CONV_NONE --disable-forward --disable-backward-data --disable-backward-weights)
 
-set(WA_ISSUE_936_ENV "")
+if(WORKAROUND_ISSUE_936)
+    set(WA_ISSUE_936_ENV MIOPEN_DEBUG_CONV_IMPLICIT_GEMM_HIP_FWD_V4R1=0)
+    # This is used together with WA_ISSUE_936_ENV, in cases when *none*
+    # iGemm Forward Solvers left after disabling IMPLICIT_GEMM_HIP_FWD_V4R1.
+    set(WA_ISSUE_936_NA_FORWARD ${CONV_BW})
+else()
+    set(WA_ISSUE_936_ENV "")
+    set(WA_ISSUE_936_NA_FORWARD "")
+endif()
 
 if(WORKAROUND_ISSUE_1188)
     set(WA_ISSUE_1188_ENV MIOPEN_DEBUG_CONV_IMPLICIT_GEMM_HIP_BWD_V4R1_XDLOPS=0)
@@ -805,25 +814,15 @@ else()
     set(WA_ISSUE_1189_ENV "")
 endif()
 
-set(CONV_F --disable-backward-data --disable-backward-weights)
-set(CONV_B --disable-forward --disable-backward-weights)
-set(CONV_W --disable-forward --disable-backward-data)
-set(CONV_FB --disable-backward-weights)
-set(CONV_FW --disable-backward-data)
-set(CONV_BW --disable-forward)
-set(CONV_NONE --disable-forward --disable-backward-data --disable-backward-weights)
-
 if((MIOPEN_TEST_GFX906 OR MIOPEN_TEST_GFX900) AND MIOPEN_TEST_HALF)
-    set(IGEMM_VEGA_FP16_NA_ALL CONV_NONE)
-    set(IGEMM_VEGA_FP16_NA_BW CONV_F)
-    set(IGEMM_VEGA_FP16_NA_FW CONV_B)
-    set(IGEMM_VEGA_FP16_NA_FB CONV_W)
-    set(IGEMM_VEGA_FP16_NA_W CONV_FB)
-    set(IGEMM_VEGA_FP16_NA_B CONV_FW)
-    set(IGEMM_VEGA_FP16_NA_F CONV_BW)
-    set(IGEMM_VEGA_FP16_NA_NONE "")
+    set(IGEMM_VEGA_FP16_NA_ALL ${CONV_NONE})
+    set(IGEMM_VEGA_FP16_NA_BW ${CONV_F})
+    set(IGEMM_VEGA_FP16_NA_FW ${CONV_B})
+    set(IGEMM_VEGA_FP16_NA_FB ${CONV_W})
+    set(IGEMM_VEGA_FP16_NA_W ${CONV_FB})
+    set(IGEMM_VEGA_FP16_NA_B ${CONV_FW})
+    set(IGEMM_VEGA_FP16_NA_F ${CONV_BW})
 else()
-    set(IGEMM_VEGA_FP16_NA_NONE "")
     set(IGEMM_VEGA_FP16_NA_ALL "")
     set(IGEMM_VEGA_FP16_NA_F "")
     set(IGEMM_VEGA_FP16_NA_B "")
@@ -834,86 +833,87 @@ else()
 endif()
 
 add_custom_test(test_conv_for_implicit_gemm SKIP_UNLESS_ALL BF16_ENABLED HALF_ENABLED GFX1030_ENABLED
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 16 28 28 --weights 192 16 3 3 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 16 14 14 --weights 160 16 3 3 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 16 7 7 --weights 128 16 3 3 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 16 55 55 --weights 96 16 1 7 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 16 28 28 --weights 64 16 1 7 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 16 14 14 --weights 32 16 1 7 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 28 28 --weights 192 32 3 3 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 14 14 --weights 160 32 3 3 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV_REAL} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 7 7 --weights 128 32 3 3 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 28 28 --weights 64 32 1 7 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 14 14 --weights 32 32 1 7 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 64 56 56 --weights 256 64 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 64 56 56 --weights 64 64 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 64 73 73 --weights 80 64 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 64 56 56 --weights 64 64 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 128 55 55 --weights 16 128 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} ${WA_ISSUE_1188_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 128 28 28 --weights 16 128 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} ${WA_ISSUE_1188_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 128 14 14 --weights 16 128 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 128 7 7 --weights 16 128 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 16 64 56 56 --weights 256 64 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 16 64 56 56 --weights 64 64 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 16 64 73 73 --weights 80 64 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 16 64 56 56 --weights 64 64 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 16 128 55 55 --weights 16 128 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} ${WA_ISSUE_1188_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 16 128 28 28 --weights 16 128 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 16 128 14 14 --weights 16 128 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 16 128 7 7 --weights 16 128 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 128 55 55 --weights 16 128 1 1 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 128 28 28 --weights 16 128 1 1 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 128 14 14 --weights 16 128 1 1 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 128 7 7 --weights 16 128 1 1 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 128 28 28 --weights 512 128 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 160 73 73 --weights 64 160 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 192 35 35 --weights 32 192 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 192 35 35 --weights 48 192 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 192 35 35 --weights 64 192 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 192 28 28 --weights 16 192 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 192 28 28 --weights 32 192 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 192 28 28 --weights 64 192 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 192 28 28 --weights 96 192 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 256 35 35 --weights 48 256 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 256 35 35 --weights 64 256 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 256 56 56 --weights 128 256 1 1 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 256 56 56 --weights 512 256 1 1 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} ${WA_ISSUE_1188_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 256 56 56 --weights 64 256 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 256 28 28 --weights 128 256 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 256 28 28 --weights 32 256 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 256 28 28 --weights 64 256 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 288 35 35 --weights 48 288 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 288 35 35 --weights 64 288 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 384 35 35 --weights 192 384 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 384 35 35 --weights 64 384 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 384 35 35 --weights 96 384 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 480 14 14 --weights 16 480 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 480 14 14 --weights 192 480 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 480 14 14 --weights 64 480 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 480 14 14 --weights 96 480 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 28 28 --weights 128 512 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 28 28 --weights 256 512 1 1 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 14 14 --weights 112 512 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 14 14 --weights 128 512 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 14 14 --weights 144 512 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 14 14 --weights 160 512 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 14 14 --weights 24 512 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 14 14 --weights 32 512 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 14 14 --weights 64 512 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 128 832 7 7 --weights 32 832 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 128 832 7 7 --weights 192 832 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 128 832 7 7 --weights 128 832 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 128 832 7 7 --weights 32 832 1 1 --pads_strides_dilations 0 0 1 1 2 2 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 128 832 7 7 --weights 192 832 1 1 --pads_strides_dilations 0 0 1 1 2 2 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} ${WA_ISSUE_1189_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 128 832 7 7 --weights 128 832 1 1 --pads_strides_dilations 0 0 1 1 2 2 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 16 2048 7 7 --weights 192 2048 1 1 --pads_strides_dilations 0 0 1 1 2 2 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 28 28 --weights 192 32 3 3 --pads_strides_dilations 1 1 2 2 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 8 16 14 14 --weights 32 16 1 1 --pads_strides_dilations 1 1 1 1 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 14 14 --weights 192 32 3 3 --pads_strides_dilations 1 1 2 2 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 7 7 --weights 192 32 3 3 --pads_strides_dilations 1 1 2 2 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 28 28 --weights 192 32 3 3 --pads_strides_dilations 2 2 2 2 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 14 14 --weights 192 32 3 3 --pads_strides_dilations 2 2 2 2 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
-COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 7 7 --weights 192 32 3 3 --pads_strides_dilations 2 2 2 2 1 1 ${IGEMM_VEGA_FP16_NA_NONE}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 16 28 28 --weights 192 16 3 3 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 16 14 14 --weights 160 16 3 3 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 16 7 7 --weights 128 16 3 3 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 16 55 55 --weights 96 16 1 7 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 16 28 28 --weights 64 16 1 7 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 16 14 14 --weights 32 16 1 7 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 28 28 --weights 192 32 3 3 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 14 14 --weights 160 32 3 3 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 7 7 --weights 128 32 3 3 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW} ${WA_ISSUE_936_NA_FORWARD}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 55 55 --weights 96 32 1 7 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_936_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 28 28 --weights 64 32 1 7 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 14 14 --weights 32 32 1 7 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 64 56 56 --weights 256 64 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 64 56 56 --weights 64 64 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 64 73 73 --weights 80 64 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 64 56 56 --weights 64 64 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 128 55 55 --weights 16 128 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_1188_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 128 28 28 --weights 16 128 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_1188_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 128 14 14 --weights 16 128 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 128 7 7 --weights 16 128 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 16 64 56 56 --weights 256 64 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 16 64 56 56 --weights 64 64 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 16 64 73 73 --weights 80 64 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_FB}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 16 64 56 56 --weights 64 64 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 16 128 55 55 --weights 16 128 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_FB}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_1188_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 16 128 28 28 --weights 16 128 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 16 128 14 14 --weights 16 128 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 16 128 7 7 --weights 16 128 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_FB}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 128 55 55 --weights 16 128 1 1 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 128 28 28 --weights 16 128 1 1 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 128 14 14 --weights 16 128 1 1 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 128 7 7 --weights 16 128 1 1 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 128 28 28 --weights 512 128 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 160 73 73 --weights 64 160 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 192 35 35 --weights 32 192 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 192 35 35 --weights 48 192 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 192 35 35 --weights 64 192 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 192 28 28 --weights 16 192 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 192 28 28 --weights 32 192 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 192 28 28 --weights 64 192 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 192 28 28 --weights 96 192 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 256 35 35 --weights 48 256 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 256 35 35 --weights 64 256 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 256 56 56 --weights 128 256 1 1 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 256 56 56 --weights 512 256 1 1 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_1188_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 256 56 56 --weights 64 256 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 256 28 28 --weights 128 256 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 256 28 28 --weights 32 256 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 256 28 28 --weights 64 256 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 288 35 35 --weights 48 288 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 288 35 35 --weights 64 288 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 384 35 35 --weights 192 384 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 384 35 35 --weights 64 384 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 384 35 35 --weights 96 384 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 480 14 14 --weights 16 480 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 480 14 14 --weights 192 480 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 480 14 14 --weights 64 480 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 480 14 14 --weights 96 480 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 28 28 --weights 128 512 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 28 28 --weights 256 512 1 1 --pads_strides_dilations 0 0 2 2 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 14 14 --weights 112 512 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 14 14 --weights 128 512 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 14 14 --weights 144 512 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 14 14 --weights 160 512 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 14 14 --weights 24 512 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_ALL}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 14 14 --weights 32 512 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 512 14 14 --weights 64 512 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 128 832 7 7 --weights 32 832 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 128 832 7 7 --weights 192 832 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 128 832 7 7 --weights 128 832 1 1 --pads_strides_dilations 0 0 1 1 1 1 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 128 832 7 7 --weights 32 832 1 1 --pads_strides_dilations 0 0 1 1 2 2 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 128 832 7 7 --weights 192 832 1 1 --pads_strides_dilations 0 0 1 1 2 2 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} ${WA_ISSUE_1189_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 128 832 7 7 --weights 128 832 1 1 --pads_strides_dilations 0 0 1 1 2 2 ${IGEMM_VEGA_FP16_NA_B}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 16 2048 7 7 --weights 192 2048 1 1 --pads_strides_dilations 0 0 1 1 2 2 ${IGEMM_VEGA_FP16_NA_FB}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 28 28 --weights 192 32 3 3 --pads_strides_dilations 1 1 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 8 16 14 14 --weights 32 16 1 1 --pads_strides_dilations 1 1 1 1 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 14 14 --weights 192 32 3 3 --pads_strides_dilations 1 1 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 7 7 --weights 192 32 3 3 --pads_strides_dilations 1 1 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 28 28 --weights 192 32 3 3 --pads_strides_dilations 2 2 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 14 14 --weights 192 32 3 3 --pads_strides_dilations 2 2 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
+COMMAND ${IMPLICITGEMM_TESTING_ENV} $<TARGET_FILE:test_conv2d> ${IMPLICITGEMM_ARGS} --verbose --input 64 32 7 7 --weights 192 32 3 3 --pads_strides_dilations 2 2 2 2 1 1 ${IGEMM_VEGA_FP16_NA_BW}
 )
 
 add_custom_test(test_conv_group SKIP_UNLESS_ALL  MIOTENSILE_ENABLED GFX1030_ENABLED
