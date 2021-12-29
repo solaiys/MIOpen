@@ -860,8 +860,8 @@ ConvSolution ConvAsmImplicitGemmGTCDynamicFwdXdlopsNHWC::GetSolution(
     kernel.l_wk.push_back(1);
     kernel.l_wk.push_back(1);
 
-    const auto isGfx90aFp16altSupport =
-        (ctx.GetStream().GetDeviceName() == "gfx90a") && ctx.conv_problem.IsFp16();
+    const auto isGfx90aFp16altSupport = 0;
+        //(ctx.GetStream().GetDeviceName() == "gfx90a") && ctx.conv_problem.IsFp16();
 
     const auto is_nchw = ctx.IsLayoutDefault();
 
