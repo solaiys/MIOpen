@@ -48,6 +48,11 @@
 #include <tuple> // std::ignore
 #include <vector>
 
+/// Correctness problems on MI200 with base driver 5.11.14 (~ROCm 4.3.1).
+/// With base driver 5.11.32 the errors disappear.
+/// More info at https://github.com/ROCmSoftwarePlatform/MIOpen/issues/1257.
+#define WORKAROUND_ISSUE_1257 (HIP_PACKAGE_VERSION_FLAT >= 4003021331)
+
 MIOPEN_DECLARE_ENV_VAR(MIOPEN_DEBUG_COMGR_LOG_CALLS)
 MIOPEN_DECLARE_ENV_VAR(MIOPEN_DEBUG_COMGR_LOG_SOURCE_NAMES)
 
@@ -105,7 +110,17 @@ MIOPEN_DECLARE_ENV_VAR(MIOPEN_DEBUG_SRAM_EDC_DISABLED)
 #define HIP_SUPPORTS_PCH 0
 #endif
 #endif
+
+// '__hipGetPCH' is not available in [4.4, 5.0). See SWDEV-308265.
+#if HIP_SUPPORTS_PCH && (HIP_PACKAGE_VERSION_FLAT >= 4004000000) && \
+    (HIP_PACKAGE_VERSION_FLAT < 5000000000)
+#undef HIP_SUPPORTS_PCH
+#define HIP_SUPPORTS_PCH 0
+#endif
+
 #endif // COMGR_SUPPORTS_PCH
+
+#define PCH_IS_SUPPORTED (COMGR_SUPPORTS_PCH && HIP_SUPPORTS_PCH)
 
 MIOPEN_DECLARE_ENV_VAR(MIOPEN_DEBUG_COMGR_HIP_PCH_ENFORCE)
 
@@ -232,23 +247,15 @@ static void RemoveOptionsUnwanted(OptionList& list)
 
 namespace hip {
 
-#if COMGR_SUPPORTS_PCH
-static bool IsPchEnabled()
-{
-    if(miopen::IsEnabled(MIOPEN_DEBUG_COMGR_HIP_PCH_ENFORCE{}))
-        return true;
-    if(miopen::IsDisabled(MIOPEN_DEBUG_COMGR_HIP_PCH_ENFORCE{}))
-        return false;
-    return HIP_SUPPORTS_PCH;
-}
+#if PCH_IS_SUPPORTED
+static bool IsPchEnabled() { return !miopen::IsDisabled(MIOPEN_DEBUG_COMGR_HIP_PCH_ENFORCE{}); }
 #endif
 
 static std::string GetPchEnableStatus()
 {
-#if COMGR_SUPPORTS_PCH
+#if PCH_IS_SUPPORTED
     auto rv = std::string{IsPchEnabled() ? "1" : "0"};
-    if(miopen::IsEnabled(MIOPEN_DEBUG_COMGR_HIP_PCH_ENFORCE{}) ||
-       miopen::IsDisabled(MIOPEN_DEBUG_COMGR_HIP_PCH_ENFORCE{}))
+    if(miopen::IsDisabled(MIOPEN_DEBUG_COMGR_HIP_PCH_ENFORCE{}))
         return rv += " (enforced)";
     return rv;
 #else
@@ -264,19 +271,29 @@ static bool IsLinkerOption(const std::string& option)
 
 static void RemoveCommonOptionsUnwanted(OptionList& list)
 {
-    list.erase(remove_if(list.begin(),
-                         list.end(),
-                         [&](const auto& option) { // clang-format off
+    list.erase(
+        remove_if(
+            list.begin(),
+            list.end(),
+            [&](const auto& option) { // clang-format off
                              return miopen::StartsWith(option, "-mcpu=")
                                 || (option == "-hc")
                                 || (option == "-x hip") || (option == "-xhip")
                                 || (option == "--hip-link")
-                                || (option == "-lclang_rt.builtins-x86_64")
-                                || miopen::StartsWith(option, "-mllvm -amdgpu-early-inline-all")
-                                || miopen::StartsWith(option, "-mllvm -amdgpu-function-calls")
+                                // The following matches current "-lclang_rt.builtins-x86_64" (4.5) as weel as
+                                // upcoming ".../libclang_rt.builtins-x86_64.a" and even future things like
+                                // "...x86_64.../libclang_rt.builtins.a" etc.
+                                || ((option.find("clang_rt.builtins") != std::string::npos)
+                                 && (option.find("x86_64") != std::string::npos))
                                 || miopen::StartsWith(option, "--hip-device-lib-path="); // clang-format on
-                         }),
-               list.end());
+            }),
+        list.end());
+}
+
+static void AddCompilerOptions(const OptionList& list) // `const` is for clang-tidy.
+{
+    // Nothing to do here yet, but let's keep the placeholder for now.
+    std::ignore = list;
 }
 
 static void RemoveCompilerOptionsUnwanted(OptionList& list)
@@ -306,13 +323,18 @@ static void RemoveLinkOptionsUnwanted(OptionList& list)
 } // namespace hip
 
 /// \todo Get list of supported isa names from comgr and select.
-static std::string GetIsaName(const miopen::TargetProperties& target)
+static std::string GetIsaName(const miopen::TargetProperties& target, const bool isHlcBuild)
 {
 #if ROCM_FEATURE_TARGETID_OFF
+    std::ignore = isHlcBuild;
     const char* const ecc_suffix = (target.Sramecc() && *target.Sramecc()) ? "+sram-ecc" : "";
     return {"amdgcn-amd-amdhsa--" + target.Name() + ecc_suffix};
 #else
     const LcOptionTargetStrings lots(target);
+#if WORKAROUND_ISSUE_1257
+    if(isHlcBuild)
+        return {"amdgcn-amd-amdhsa--" + lots.device + lots.xnack};
+#endif
     return {"amdgcn-amd-amdhsa--" + lots.targetId};
 #endif
 }
@@ -521,7 +543,7 @@ class Data : ComgrOwner
     {
         ECI_THROW(amd_comgr_set_data(handle, bytes.size(), bytes.data()), bytes.size());
     }
-#if COMGR_SUPPORTS_PCH
+#if PCH_IS_SUPPORTED
     void SetFromBuffer(const char* const buffer, const size_t size) const
     {
         ECI_THROW(amd_comgr_set_data(handle, size, buffer), size);
@@ -582,7 +604,7 @@ class Dataset : ComgrOwner
             MIOPEN_LOG_I(text);
         }
     }
-#if COMGR_SUPPORTS_PCH
+#if PCH_IS_SUPPORTED
     void AddDataHipPch(const char* const content, const size_t size) const
     {
         const char name[] = "hip.pch";
@@ -628,8 +650,10 @@ class ActionInfo : ComgrOwner
     {
         ECI_THROW(amd_comgr_action_info_set_logging(handle, state), state);
     }
-    void SetOptionList(const std::vector<std::string>& options) const
+    void SetOptionList(const std::vector<std::string>& options_) const
     {
+        // Split remaining pairs, e.g. "-mllvm -amdgpu-early-inline-all=true".
+        const auto options = miopen::SplitSpaceSeparated(options_);
         std::vector<const char*> vp;
         vp.reserve(options.size());
         std::transform(options.begin(), options.end(), std::back_inserter(vp), [&](auto& opt) {
@@ -695,11 +719,13 @@ static std::string GetLog(const Dataset& dataset, const bool comgr_error_handlin
     return text;
 }
 
-static void SetIsaName(const ActionInfo& action, const miopen::TargetProperties& target)
+static void SetIsaName(const ActionInfo& action,
+                       const miopen::TargetProperties& target,
+                       const bool isHlcBuild = false)
 {
     // This can't be implemented in ActionInfo because
     // comgr wrappers should not depend on compiler implementation.
-    const auto isaName = compiler::lc::GetIsaName(target);
+    const auto isaName = compiler::lc::GetIsaName(target, isHlcBuild);
     MIOPEN_LOG_I2(isaName);
     action.SetIsaName(isaName);
 }
@@ -733,7 +759,7 @@ void BuildHip(const std::string& name,
         for(const auto& inc : incNames)
             inputs.AddData(inc, miopen::GetKernelInc(inc), AMD_COMGR_DATA_KIND_INCLUDE);
 
-#if COMGR_SUPPORTS_PCH
+#if PCH_IS_SUPPORTED
         if(compiler::lc::hip::IsPchEnabled())
         {
             const char* pch       = nullptr;
@@ -745,7 +771,7 @@ void BuildHip(const std::string& name,
 
         const ActionInfo action;
         action.SetLanguage(AMD_COMGR_LANGUAGE_HIP);
-        SetIsaName(action, target);
+        SetIsaName(action, target, true);
         action.SetLogging(true);
 
         const Dataset exe;
@@ -775,7 +801,7 @@ void BuildHip(const std::string& name,
             if(miopen::solver::support_amd_buffer_atomic_fadd(target.Name()))
                 raw += " -DCK_AMD_BUFFER_ATOMIC_FADD_RETURNS_FLOAT=1";
 #endif
-#if COMGR_SUPPORTS_PCH
+#if PCH_IS_SUPPORTED
             if(compiler::lc::hip::IsPchEnabled())
             {
                 raw += " -nogpuinc -DMIOPEN_DONT_USE_HIP_RUNTIME_HEADERS=1";
@@ -784,7 +810,7 @@ void BuildHip(const std::string& name,
             auto optCompile = miopen::SplitSpaceSeparated(raw, compiler::lc::GetOptionsNoSplit());
             auto optLink    = optCompile;
             compiler::lc::hip::RemoveCompilerOptionsUnwanted(optCompile);
-            compiler::lc::hip::RemoveLinkOptionsUnwanted(optLink);
+            compiler::lc::hip::AddCompilerOptions(optCompile);
 
             action.SetOptionList(optCompile);
             const Dataset compiledBc;
@@ -799,6 +825,7 @@ void BuildHip(const std::string& name,
             const Dataset withDevLibs;
             action.Do(AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES, compiledBc, withDevLibs);
 
+            compiler::lc::hip::RemoveLinkOptionsUnwanted(optLink);
             action.SetOptionList(optLink);
             const Dataset linkedBc;
             action.Do(AMD_COMGR_ACTION_LINK_BC_TO_BC, withDevLibs, linkedBc);
@@ -822,6 +849,7 @@ void BuildHip(const std::string& name,
     }
     catch(ComgrError& ex)
     {
+        binary.resize(0); // Necessary when "get binary" fails.
         MIOPEN_LOG_E("comgr status = " << GetStatusText(ex.status));
         if(!ex.text.empty())
             MIOPEN_LOG_W(ex.text);
@@ -845,7 +873,7 @@ void BuildOcl(const std::string& name,
 #else
         action.SetLanguage(AMD_COMGR_LANGUAGE_OPENCL_1_2);
 #endif
-        SetIsaName(action, target);
+        SetIsaName(action, target, true);
         action.SetLogging(true);
 
         auto optCompile = miopen::SplitSpaceSeparated(options);
@@ -902,6 +930,7 @@ void BuildOcl(const std::string& name,
     }
     catch(ComgrError& ex)
     {
+        binary.resize(0);
         MIOPEN_LOG_E("comgr status = " << GetStatusText(ex.status));
         if(!ex.text.empty())
             MIOPEN_LOG_W(ex.text);
@@ -927,7 +956,7 @@ void BuildAsm(const std::string& name,
 #if WORKAROUND_SWDEV_255735
         if(miopen::HipCompilerVersion() >= miopen::external_tool_version_t{3, 8, 20403})
             if(target.Xnack() && !*target.Xnack())
-                optAsm.push_back("-mno-xnack");
+                optAsm.emplace_back("-mno-xnack");
 #endif
         compiler::lc::gcnasm::RemoveOptionsUnwanted(optAsm);
         action.SetOptionList(optAsm);
@@ -948,6 +977,7 @@ void BuildAsm(const std::string& name,
     }
     catch(ComgrError& ex)
     {
+        binary.resize(0);
         MIOPEN_LOG_E("comgr status = " << GetStatusText(ex.status));
         if(!ex.text.empty())
             MIOPEN_LOG_W(ex.text);

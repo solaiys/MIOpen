@@ -135,7 +135,10 @@ struct SolverBase
     float GetWti(const Context&) const { return -2.0; }
 
     // Returns the workspace size required by the solver for a given ConvolutionContext
-    size_t GetWorkspaceSize(const Context&) const { return 0; };
+    size_t GetWorkspaceSize(const Context&) const { return 0; }
+
+    // Must return true if a Solver has its own implementation of GetWorkspaceSize().
+    bool MayNeedWorkspace() const { return false; }
 
     /// Takes problem config, optimization parameters and other info
     /// and computes information required to build and run the kernel(s).
@@ -248,6 +251,7 @@ struct ConvAsm1x1U : SolverBase<ConvolutionContext>
                                         const AnyInvokeParams& invoke_ctx) const;
     bool IsApplicable(const ConvolutionContext& params) const;
     size_t GetWorkspaceSize(const ConvolutionContext& params) const;
+    bool MayNeedWorkspace() const { return true; }
     ConvSolution GetSolution(const ConvolutionContext& params,
                              const PerformanceConfigConvAsm1x1U& config,
                              bool disableConfigOverrideFromEnv = false) const;
@@ -790,13 +794,6 @@ struct ConvHipImplicitGemmV4R4Fwd : SolverBase<ConvolutionContext>
                              bool disableConfigOverrideFromEnv = false) const;
 };
 
-struct ConvHipImplicitGemmMlirCppFwd : SolverBase<ConvolutionContext>
-{
-    static std::tuple<int, int, int> CalculateGemmSize(const ConvolutionContext& ctx);
-    bool IsApplicable(const ConvolutionContext& ctx) const;
-    ConvSolution GetSolution(const ConvolutionContext& ctx) const;
-};
-
 struct PerformanceConvMlirIgemm : Serializable<PerformanceConvMlirIgemm>
 {
     int BlockSize;
@@ -970,13 +967,6 @@ struct ConvHipImplicitGemmV4R4WrW : SolverBase<ConvolutionContext>
     ConvSolution GetSolution(const ConvolutionContext& ctx,
                              const PerformanceImplicitGemmV4R4WrW& config,
                              bool disableConfigOverrideFromEnv = false) const;
-};
-
-struct ConvHipImplicitGemmMlirCppWrW : SolverBase<ConvolutionContext>
-{
-    static std::tuple<int, int, int> CalculateGemmSize(const ConvolutionContext& ctx);
-    bool IsApplicable(const ConvolutionContext& ctx) const;
-    ConvSolution GetSolution(const ConvolutionContext& ctx) const;
 };
 
 struct ConvMlirIgemmWrW : SolverBase<ConvolutionContext>
@@ -1394,13 +1384,7 @@ struct ConvHipImplicitGemmBwdDataV1R1 : SolverBase<ConvolutionContext>
                              const PerformanceImplicitGemmBwdDataV1R1& config,
                              bool disableConfigOverrideFromEnv = false) const;
     size_t GetWorkspaceSize(const ConvolutionContext& ctx) const;
-};
-
-struct ConvHipImplicitGemmMlirCppBwd : SolverBase<ConvolutionContext>
-{
-    static std::tuple<int, int, int> CalculateGemmSize(const ConvolutionContext& ctx);
-    bool IsApplicable(const ConvolutionContext& ctx) const;
-    ConvSolution GetSolution(const ConvolutionContext& ctx) const;
+    bool MayNeedWorkspace() const { return true; }
 };
 
 struct ConvMlirIgemmBwd : SolverBase<ConvolutionContext>
@@ -1469,6 +1453,7 @@ struct ConvHipImplicitGemmBwdDataV1R1Xdlops : SolverBase<ConvolutionContext>
                                   const PerformanceImplicitGemmBwdV1R1Xdlops& c) const;
     bool IsApplicable(const ConvolutionContext& ctx) const;
     size_t GetWorkspaceSize(const ConvolutionContext& ctx) const;
+    bool MayNeedWorkspace() const { return true; }
     ConvSolution GetSolution(const ConvolutionContext& ctx,
                              const PerformanceImplicitGemmBwdV1R1Xdlops& config,
                              bool disableConfigOverrideFromEnv = false) const;
@@ -1495,6 +1480,7 @@ struct ConvAsmImplicitGemmV4R1DynamicWrw : SolverBase<ConvolutionContext>
     bool IsApplicable(const ConvolutionContext& ctx) const;
     bool IsDynamic() const { return true; }
     size_t GetWorkspaceSize(const ConvolutionContext& ctx) const;
+    bool MayNeedWorkspace() const { return true; }
     ConvSolution GetSolution(const ConvolutionContext& ctx) const;
 };
 
@@ -1503,6 +1489,7 @@ struct ConvAsmImplicitGemmGTCDynamicWrwXdlops : SolverBase<ConvolutionContext>
     bool IsApplicable(const ConvolutionContext& ctx) const;
     bool IsDynamic() const { return true; }
     size_t GetWorkspaceSize(const ConvolutionContext& ctx) const;
+    bool MayNeedWorkspace() const { return true; }
     ConvSolution GetSolution(const ConvolutionContext& ctx) const;
 };
 
@@ -1696,6 +1683,7 @@ struct ConvMPBidirectWinograd : SolverBase<ConvolutionContext>
     bool IsApplicable(const ConvolutionContext& params) const;
     bool IsDynamic() const { return true; }
     size_t GetWorkspaceSize(const ConvolutionContext& params) const;
+    bool MayNeedWorkspace() const { return true; }
     ConvSolution GetSolution(const ConvolutionContext& params) const;
 
     // kernel_file_name for solver identification
@@ -1746,6 +1734,7 @@ struct ConvMPBidirectWinograd_xdlops : SolverBase<ConvolutionContext>
                ConvHipImplicitGemmForwardV4R4Xdlops{}.GetWorkspaceSize(
                    GetTransformedConvContext(ctx));
     }
+    bool MayNeedWorkspace() const { return true; }
 
     ConvSolution GetSolution(const ConvolutionContext& ctx,
                              const PerformanceImplicitGemmForwardV4R4Xdlops& config,
@@ -1804,6 +1793,7 @@ struct ConvWinograd3x3MultipassWrW : SolverBase<ConvolutionContext>
     bool IsApplicable(const ConvolutionContext& params) const;
     bool IsDynamic() const { return true; }
     size_t GetWorkspaceSize(const ConvolutionContext& params) const;
+    bool MayNeedWorkspace() const { return true; }
     ConvSolution GetSolution(const ConvolutionContext& params) const;
 
     // kernel_file_name for solver identification
@@ -2007,6 +1997,7 @@ struct ConvAsmBwdWrW1x1 : SolverBase<ConvolutionContext>
                                              const AnyInvokeParams& invoke_ctx) const;
     bool IsApplicable(const ConvolutionContext& params) const;
     size_t GetWorkspaceSize(const ConvolutionContext& params) const;
+    bool MayNeedWorkspace() const { return true; }
     ConvSolution GetSolution(const ConvolutionContext& params,
                              const PerformanceConfigConvAsmBwdWrW1x1& config,
                              bool disableConfigOverrideFromEnv = false) const;
@@ -2084,6 +2075,7 @@ struct ConvOclBwdWrW2 : SolverBase<ConvolutionContext>
                                                           const AnyInvokeParams& invoke_ctx) const;
     bool IsApplicable(const ConvolutionContext& params) const;
     size_t GetWorkspaceSize(const ConvolutionContext& params) const;
+    bool MayNeedWorkspace() const { return true; }
     ConvSolution GetSolution(const ConvolutionContext& params,
                              const PerformanceConfigConvOclBwdWrw2<N_BATCH_LOOPS>& config,
                              bool disableConfigOverrideFromEnv = false) const;
@@ -2120,6 +2112,7 @@ struct ConvOclBwdWrW53 : SolverBase<ConvolutionContext>
 {
     bool IsApplicable(const ConvolutionContext& params) const;
     size_t GetWorkspaceSize(const ConvolutionContext& params) const;
+    bool MayNeedWorkspace() const { return true; }
     ConvSolution GetSolution(const ConvolutionContext& params) const;
 };
 
@@ -2128,12 +2121,14 @@ struct ConvOclBwdWrW1x1 : SolverBase<ConvolutionContext>
     bool IsApplicable(const ConvolutionContext& params) const;
     ConvSolution GetSolution(const ConvolutionContext& params) const;
     size_t GetWorkspaceSize(const ConvolutionContext& params) const;
+    bool MayNeedWorkspace() const { return true; }
 };
 
 struct fft : SolverBase<ConvolutionContext>
 {
     bool IsApplicable(const ConvolutionContext& ctx) const;
     size_t GetWorkspaceSize(const ConvolutionContext& ctx) const;
+    bool MayNeedWorkspace() const { return true; }
     ConvSolution GetSolution(const ConvolutionContext& ctx) const;
 };
 
@@ -2195,6 +2190,7 @@ struct ConvHipImplicitGemmWrwV4R4Xdlops : SolverBase<ConvolutionContext>
 {
     PerformanceImplicitGemmWrwV4R4Xdlops GetPerformanceConfig(const ConvolutionContext& ctx) const;
     size_t GetWorkspaceSize(const ConvolutionContext& ctx) const;
+    bool MayNeedWorkspace() const { return true; }
     bool IsValidPerformanceConfig(const ConvolutionContext& ctx,
                                   const PerformanceImplicitGemmWrwV4R4Xdlops& c) const;
     bool IsApplicable(const ConvolutionContext& ctx) const;
@@ -2272,6 +2268,7 @@ struct ConvHipImplicitGemmWrwV4R4Xdlops_Padded_Gemm : SolverBase<ConvolutionCont
     PerformanceImplicitGemmWrwV4R4Xdlops_Padded_Gemm
     GetPerformanceConfig(const ConvolutionContext& ctx) const;
     size_t GetWorkspaceSize(const ConvolutionContext& ctx) const;
+    bool MayNeedWorkspace() const { return true; }
     bool IsValidPerformanceConfig(const ConvolutionContext& ctx,
                                   const PerformanceImplicitGemmWrwV4R4Xdlops_Padded_Gemm& c) const;
     bool IsApplicable(const ConvolutionContext& ctx) const;
@@ -2311,6 +2308,7 @@ struct ConvCkIgemmFwdV6r1DlopsNchw : SolverBase<ConvolutionContext>
 {
     bool IsApplicable(const ConvolutionContext&) const;
     std::size_t GetWorkspaceSize(const ConvolutionContext&) const;
+    bool MayNeedWorkspace() const { return true; }
     bool IsDynamic() const { return true; }
     PerformanceConvCkIgemmFwdV6r1DlopsNchw GetPerformanceConfig(const ConvolutionContext&) const;
     bool IsValidPerformanceConfig(const ConvolutionContext&,
@@ -2366,6 +2364,7 @@ struct GemmFwd1x1_0_2 : GemmFwdBase
     {
         return GetWorkspaceSize(ctx, ctx.conv_problem);
     }
+    bool MayNeedWorkspace() const { return true; }
 
     bool IsApplicable(const ConvolutionContext& ctx) const
     {
@@ -2388,6 +2387,7 @@ struct GemmFwd1x1_0_1_int8 : GemmFwdBase
     {
         return GetWorkspaceSize(ctx, ctx.conv_problem);
     }
+    bool MayNeedWorkspace() const { return true; }
 
     bool IsApplicable(const ConvolutionContext& ctx) const
     {
@@ -2410,6 +2410,7 @@ struct GemmFwd1x1_0_1 : GemmFwdBase
     {
         return GetWorkspaceSize(ctx, ctx.conv_problem);
     }
+    bool MayNeedWorkspace() const { return true; }
 
     bool IsApplicable(const ConvolutionContext& ctx) const
     {
@@ -2432,6 +2433,7 @@ struct GemmFwdRest : GemmFwdBase
     {
         return GetWorkspaceSize(ctx, ctx.conv_problem);
     }
+    bool MayNeedWorkspace() const { return true; }
 
     bool IsApplicable(const ConvolutionContext& ctx) const
     {
@@ -2462,6 +2464,7 @@ struct GemmBwd1x1_stride2 : GemmBwdBase
     {
         return GetWorkspaceSize(ctx, ctx.conv_problem);
     }
+    bool MayNeedWorkspace() const { return true; }
 
     bool IsApplicable(const ConvolutionContext& ctx) const
     {
@@ -2484,6 +2487,7 @@ struct GemmBwd1x1_stride1 : GemmBwdBase
     {
         return GetWorkspaceSize(ctx, ctx.conv_problem);
     }
+    bool MayNeedWorkspace() const { return true; }
 
     bool IsApplicable(const ConvolutionContext& ctx) const
     {
@@ -2506,6 +2510,7 @@ struct GemmBwdRest : GemmBwdBase
     {
         return GetWorkspaceSize(ctx, ctx.conv_problem);
     }
+    bool MayNeedWorkspace() const { return true; }
 
     bool IsApplicable(const ConvolutionContext& ctx) const
     {
@@ -2536,6 +2541,7 @@ struct GemmWrw1x1_stride1 : GemmWrwBase
     {
         return GetWorkspaceSize(ctx, ctx.conv_problem);
     }
+    bool MayNeedWorkspace() const { return true; }
 
     bool IsApplicable(const ConvolutionContext& ctx) const
     {
@@ -2558,6 +2564,7 @@ struct GemmWrwUniversal : GemmWrwBase
     {
         return GetWorkspaceSize(ctx, ctx.conv_problem);
     }
+    bool MayNeedWorkspace() const { return true; }
 
     bool IsApplicable(const ConvolutionContext& ctx) const
     {
@@ -2578,7 +2585,7 @@ struct PerformanceConfigAsmImplicitGemmGTC : Serializable<PerformanceConfigAsmIm
 {
     std::string direction;
     std::string tensor_layout;
-    miopenDataType_t precision;
+    std::string precision;
     int nxb;
     int nxe;
 
@@ -2610,6 +2617,31 @@ struct PerformanceConfigAsmImplicitGemmGTC : Serializable<PerformanceConfigAsmIm
 
     PerformanceConfigAsmImplicitGemmGTC(std::string dir,
                                         std::string layout,
+                                        std::string prec,
+                                        int b,
+                                        int e,
+                                        int mpb,
+                                        int npb,
+                                        int kpb,
+                                        int wtm,
+                                        int wtn,
+                                        int wtk,
+                                        int wsm,
+                                        int wsn,
+                                        int wrm,
+                                        int wrn,
+                                        int mh,
+                                        int vs,
+                                        int gks,
+                                        int me,
+                                        int pta,
+                                        std::initializer_list<int> ta_t,
+                                        std::initializer_list<int> ta_c,
+                                        std::initializer_list<int> tb_t,
+                                        std::initializer_list<int> tb_c,
+                                        bool spare = false);
+    PerformanceConfigAsmImplicitGemmGTC(std::string dir,
+                                        std::string layout,
                                         miopenDataType_t prec,
                                         int b,
                                         int e,
@@ -2636,7 +2668,7 @@ struct PerformanceConfigAsmImplicitGemmGTC : Serializable<PerformanceConfigAsmIm
     PerformanceConfigAsmImplicitGemmGTC()
         : PerformanceConfigAsmImplicitGemmGTC("fwd",
                                               "nchw",
-                                              miopenFloat,
+                                              "fp32",
                                               1,
                                               1,
                                               1,
@@ -2664,7 +2696,7 @@ struct PerformanceConfigAsmImplicitGemmGTC : Serializable<PerformanceConfigAsmIm
     PerformanceConfigAsmImplicitGemmGTC(bool spare)
         : PerformanceConfigAsmImplicitGemmGTC("fwd",
                                               "nchw",
-                                              miopenFloat,
+                                              "fp32",
                                               1,
                                               1,
                                               1,
@@ -2693,10 +2725,9 @@ struct PerformanceConfigAsmImplicitGemmGTC : Serializable<PerformanceConfigAsmIm
     template <class Self, class F>
     static void Visit(Self&& self, F f)
     {
-        std::string prec_string = self.precision == miopenFloat ? "fp32" : "fp16";
         f(self.direction, "dir");
         f(self.tensor_layout, "lyt");
-        f(prec_string, "pre");
+        f(self.precision, "pre");
         f(self.nxb, "nxb");
         f(self.nxe, "nxe");
         f(self.gemm_m_per_block, "mpb");
@@ -2757,6 +2788,58 @@ struct PerformanceConfigAsmImplicitGemmGTCFwdXdlopsNHWC : PerformanceConfigAsmIm
 {
     PerformanceConfigAsmImplicitGemmGTCFwdXdlopsNHWC(std::string dir,
                                                      std::string layout,
+                                                     std::string prec,
+                                                     int b,
+                                                     int e,
+                                                     int mpb,
+                                                     int npb,
+                                                     int kpb,
+                                                     int wtm,
+                                                     int wtn,
+                                                     int wtk,
+                                                     int wsm,
+                                                     int wsn,
+                                                     int wrm,
+                                                     int wrn,
+                                                     int mh,
+                                                     int vs,
+                                                     int gks,
+                                                     int me,
+                                                     int pta,
+                                                     std::initializer_list<int> ta_t,
+                                                     std::initializer_list<int> ta_c,
+                                                     std::initializer_list<int> tb_t,
+                                                     std::initializer_list<int> tb_c,
+                                                     bool spare = false)
+        : PerformanceConfigAsmImplicitGemmGTC(dir,
+                                              layout,
+                                              prec,
+                                              b,
+                                              e,
+                                              mpb,
+                                              npb,
+                                              kpb,
+                                              wtm,
+                                              wtn,
+                                              wtk,
+                                              wsm,
+                                              wsn,
+                                              wrm,
+                                              wrn,
+                                              mh,
+                                              vs,
+                                              gks,
+                                              me,
+                                              pta,
+                                              ta_t,
+                                              ta_c,
+                                              tb_t,
+                                              tb_c,
+                                              spare)
+    {
+    }
+    PerformanceConfigAsmImplicitGemmGTCFwdXdlopsNHWC(std::string dir,
+                                                     std::string layout,
                                                      miopenDataType_t prec,
                                                      int b,
                                                      int e,
@@ -2810,7 +2893,7 @@ struct PerformanceConfigAsmImplicitGemmGTCFwdXdlopsNHWC : PerformanceConfigAsmIm
     PerformanceConfigAsmImplicitGemmGTCFwdXdlopsNHWC()
         : PerformanceConfigAsmImplicitGemmGTCFwdXdlopsNHWC("fwd",
                                                            "nchw",
-                                                           miopenFloat,
+                                                           "fp32",
                                                            1,
                                                            1,
                                                            1,
@@ -2838,7 +2921,7 @@ struct PerformanceConfigAsmImplicitGemmGTCFwdXdlopsNHWC : PerformanceConfigAsmIm
     PerformanceConfigAsmImplicitGemmGTCFwdXdlopsNHWC(bool spare)
         : PerformanceConfigAsmImplicitGemmGTCFwdXdlopsNHWC("fwd",
                                                            "nchw",
-                                                           miopenFloat,
+                                                           "fp32",
                                                            1,
                                                            1,
                                                            1,
@@ -2879,6 +2962,9 @@ struct ConvAsmImplicitGemmGTCDynamicFwdXdlopsNHWC : SolverBase<ConvolutionContex
     PerformanceConfigAsmImplicitGemmGTCFwdXdlopsNHWC
     Search(const ConvolutionContext&, const AnyInvokeParams& invoke_ctx) const;
 
+    size_t GetWorkspaceSize(const ConvolutionContext& ctx) const;
+    bool MayNeedWorkspace() const { return true; }
+
     bool IsApplicable(const ConvolutionContext& ctx) const;
     bool IsDynamic() const { return true; }
     ConvSolution GetSolution(const ConvolutionContext& ctx,
@@ -2888,6 +2974,58 @@ struct ConvAsmImplicitGemmGTCDynamicFwdXdlopsNHWC : SolverBase<ConvolutionContex
 
 struct PerformanceConfigAsmImplicitGemmGTCBwdXdlopsNHWC : PerformanceConfigAsmImplicitGemmGTC
 {
+    PerformanceConfigAsmImplicitGemmGTCBwdXdlopsNHWC(std::string dir,
+                                                     std::string layout,
+                                                     std::string prec,
+                                                     int b,
+                                                     int e,
+                                                     int mpb,
+                                                     int npb,
+                                                     int kpb,
+                                                     int wtm,
+                                                     int wtn,
+                                                     int wtk,
+                                                     int wsm,
+                                                     int wsn,
+                                                     int wrm,
+                                                     int wrn,
+                                                     int mh,
+                                                     int vs,
+                                                     int gks,
+                                                     int me,
+                                                     int pta,
+                                                     std::initializer_list<int> ta_t,
+                                                     std::initializer_list<int> ta_c,
+                                                     std::initializer_list<int> tb_t,
+                                                     std::initializer_list<int> tb_c,
+                                                     bool spare = false)
+        : PerformanceConfigAsmImplicitGemmGTC(dir,
+                                              layout,
+                                              prec,
+                                              b,
+                                              e,
+                                              mpb,
+                                              npb,
+                                              kpb,
+                                              wtm,
+                                              wtn,
+                                              wtk,
+                                              wsm,
+                                              wsn,
+                                              wrm,
+                                              wrn,
+                                              mh,
+                                              vs,
+                                              gks,
+                                              me,
+                                              pta,
+                                              ta_t,
+                                              ta_c,
+                                              tb_t,
+                                              tb_c,
+                                              spare)
+    {
+    }
     PerformanceConfigAsmImplicitGemmGTCBwdXdlopsNHWC(std::string dir,
                                                      std::string layout,
                                                      miopenDataType_t prec,
@@ -2943,7 +3081,7 @@ struct PerformanceConfigAsmImplicitGemmGTCBwdXdlopsNHWC : PerformanceConfigAsmIm
     PerformanceConfigAsmImplicitGemmGTCBwdXdlopsNHWC()
         : PerformanceConfigAsmImplicitGemmGTCBwdXdlopsNHWC("fwd",
                                                            "nchw",
-                                                           miopenFloat,
+                                                           "fp32",
                                                            1,
                                                            1,
                                                            1,
@@ -2971,7 +3109,7 @@ struct PerformanceConfigAsmImplicitGemmGTCBwdXdlopsNHWC : PerformanceConfigAsmIm
     PerformanceConfigAsmImplicitGemmGTCBwdXdlopsNHWC(bool spare)
         : PerformanceConfigAsmImplicitGemmGTCBwdXdlopsNHWC("fwd",
                                                            "nchw",
-                                                           miopenFloat,
+                                                           "fp32",
                                                            1,
                                                            1,
                                                            1,
@@ -3011,6 +3149,9 @@ struct ConvAsmImplicitGemmGTCDynamicBwdXdlopsNHWC : SolverBase<ConvolutionContex
     PerformanceConfigAsmImplicitGemmGTCBwdXdlopsNHWC
     Search(const ConvolutionContext&, const AnyInvokeParams& invoke_ctx) const;
 
+    size_t GetWorkspaceSize(const ConvolutionContext& ctx) const;
+    bool MayNeedWorkspace() const { return true; }
+
     bool IsApplicable(const ConvolutionContext& ctx) const;
     bool IsDynamic() const { return true; }
     ConvSolution GetSolution(const ConvolutionContext& ctx,
@@ -3020,6 +3161,58 @@ struct ConvAsmImplicitGemmGTCDynamicBwdXdlopsNHWC : SolverBase<ConvolutionContex
 
 struct PerformanceConfigAsmImplicitGemmGTCWrwXdlopsNHWC : PerformanceConfigAsmImplicitGemmGTC
 {
+    PerformanceConfigAsmImplicitGemmGTCWrwXdlopsNHWC(std::string dir,
+                                                     std::string layout,
+                                                     std::string prec,
+                                                     int b,
+                                                     int e,
+                                                     int mpb,
+                                                     int npb,
+                                                     int kpb,
+                                                     int wtm,
+                                                     int wtn,
+                                                     int wtk,
+                                                     int wsm,
+                                                     int wsn,
+                                                     int wrm,
+                                                     int wrn,
+                                                     int mh,
+                                                     int vs,
+                                                     int gks,
+                                                     int me,
+                                                     int pta,
+                                                     std::initializer_list<int> ta_t,
+                                                     std::initializer_list<int> ta_c,
+                                                     std::initializer_list<int> tb_t,
+                                                     std::initializer_list<int> tb_c,
+                                                     bool spare = false)
+        : PerformanceConfigAsmImplicitGemmGTC(dir,
+                                              layout,
+                                              prec,
+                                              b,
+                                              e,
+                                              mpb,
+                                              npb,
+                                              kpb,
+                                              wtm,
+                                              wtn,
+                                              wtk,
+                                              wsm,
+                                              wsn,
+                                              wrm,
+                                              wrn,
+                                              mh,
+                                              vs,
+                                              gks,
+                                              me,
+                                              pta,
+                                              ta_t,
+                                              ta_c,
+                                              tb_t,
+                                              tb_c,
+                                              spare)
+    {
+    }
     PerformanceConfigAsmImplicitGemmGTCWrwXdlopsNHWC(std::string dir,
                                                      std::string layout,
                                                      miopenDataType_t prec,
@@ -3075,7 +3268,7 @@ struct PerformanceConfigAsmImplicitGemmGTCWrwXdlopsNHWC : PerformanceConfigAsmIm
     PerformanceConfigAsmImplicitGemmGTCWrwXdlopsNHWC()
         : PerformanceConfigAsmImplicitGemmGTCWrwXdlopsNHWC("fwd",
                                                            "nchw",
-                                                           miopenFloat,
+                                                           "fp32",
                                                            1,
                                                            1,
                                                            1,
@@ -3103,7 +3296,7 @@ struct PerformanceConfigAsmImplicitGemmGTCWrwXdlopsNHWC : PerformanceConfigAsmIm
     PerformanceConfigAsmImplicitGemmGTCWrwXdlopsNHWC(bool spare)
         : PerformanceConfigAsmImplicitGemmGTCWrwXdlopsNHWC("fwd",
                                                            "nchw",
-                                                           miopenFloat,
+                                                           "fp32",
                                                            1,
                                                            1,
                                                            1,
@@ -3134,6 +3327,8 @@ struct PerformanceConfigAsmImplicitGemmGTCWrwXdlopsNHWC : PerformanceConfigAsmIm
     bool IsValidValue() const;
     bool IsValid(const ConvolutionContext& ctx) const;
     size_t ComputeKernelOccupancy() const;
+    private:
+    void SetParamsForKSplit(const ConvolutionContext& ctx, const size_t& occupancy);
 };
 
 struct ConvAsmImplicitGemmGTCDynamicWrwXdlopsNHWC : SolverBase<ConvolutionContext>
@@ -3146,6 +3341,7 @@ struct ConvAsmImplicitGemmGTCDynamicWrwXdlopsNHWC : SolverBase<ConvolutionContex
     Search(const ConvolutionContext&, const AnyInvokeParams& invoke_ctx) const;
 
     size_t GetWorkspaceSize(const ConvolutionContext& ctx) const;
+    bool MayNeedWorkspace() const { return true; }
 
     bool IsApplicable(const ConvolutionContext& ctx) const;
     bool IsDynamic() const { return true; }

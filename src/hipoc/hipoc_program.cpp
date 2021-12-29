@@ -58,6 +58,8 @@ MIOPEN_DECLARE_ENV_VAR(MIOPEN_DEBUG_OPENCL_ENFORCE_CODE_OBJECT_OPTION)
 MIOPEN_DECLARE_ENV_VAR(MIOPEN_DEBUG_OPENCL_ENFORCE_CODE_OBJECT_VERSION)
 MIOPEN_DECLARE_ENV_VAR(MIOPEN_DEVICE_ARCH)
 
+MIOPEN_DECLARE_ENV_VAR(MIOPEN_DEBUG_OPENCL_WAVE64_NOWGP)
+
 #if MIOPEN_USE_COMGR
 #define MIOPEN_WORKAROUND_ROCM_COMPILER_SUPPORT_ISSUE_27 1
 #endif
@@ -231,10 +233,6 @@ void HIPOCProgramImpl::BuildCodeObjectInFile(std::string& params,
         hsaco_file = HipBuild(dir, filename, src, params, target);
     }
 #if MIOPEN_USE_MLIR
-    else if(miopen::EndsWith(filename, ".mlir-cpp"))
-    {
-        hsaco_file = MiirBuildViaHip(dir, filename, src, params, target);
-    }
     else if(miopen::EndsWith(filename, ".mlir"))
     {
         std::vector<char> buffer;
@@ -245,6 +243,8 @@ void HIPOCProgramImpl::BuildCodeObjectInFile(std::string& params,
     else
     {
         params += " " + GetCodeObjectVersionOption();
+        if(miopen::IsEnabled(MIOPEN_DEBUG_OPENCL_WAVE64_NOWGP{}))
+            params += " -mwavefrontsize64 -mcumode";
         WriteFile(src, dir->path / filename);
         dir->Execute(HIP_OC_COMPILER, params + " " + filename + " -o " + hsaco_file.string());
     }
@@ -273,8 +273,10 @@ void HIPOCProgramImpl::BuildCodeObjectInMemory(const std::string& params,
             comgr::BuildHip(filename, src, params, target, binary);
         else if(miopen::EndsWith(filename, ".s"))
             comgr::BuildAsm(filename, src, params, target, binary);
-        else if(miopen::EndsWith(filename, ".mlir-cpp"))
-            MIOPEN_THROW(miopenStatusNotImplemented, "MLIR builds are not supported with COMgr");
+#if MIOPEN_USE_MLIR
+        else if(miopen::EndsWith(filename, ".mlir"))
+            MiirGenBin(params, binary);
+#endif
         else
             comgr::BuildOcl(filename, src, params, target, binary);
     }
@@ -291,8 +293,6 @@ void HIPOCProgramImpl::BuildCodeObject(std::string params,
                                          : program;
     const auto src = [&]() -> std::string {
         if(miopen::EndsWith(filename, ".mlir"))
-            return {}; // MLIR solutions do not use source code.
-        if(miopen::EndsWith(filename, ".mlir-cpp"))
             return {}; // MLIR solutions do not use source code.
         if(!kernel_src.empty())
             return kernel_src;

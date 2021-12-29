@@ -71,6 +71,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <miopen/conv/context.hpp>
 #include <miopen/handle.hpp>
 #include <miopen/problem_description.hpp>
+#include <miopen/ramdb.hpp>
 
 #if MIOPEN_BACKEND_OPENCL
 #define CL_TARGET_OPENCL_VERSION 120
@@ -159,7 +160,7 @@ class StaticContainer
 #if MIOPEN_ENABLE_SQLITE
 using PerformanceDb = DbTimer<MultiFileDb<SQLitePerfDb, SQLitePerfDb, true>>;
 #else
-using PerformanceDb = DbTimer<MultiFileDb<PlainTextDb, PlainTextDb, true>>;
+using PerformanceDb = DbTimer<MultiFileDb<ReadonlyRamDb, RamDb, true>>;
 #endif
 miopen::PerformanceDb GetDb(const miopen::ExecutionContext& ctx);
 
@@ -616,7 +617,7 @@ struct mlo_construct_pooling2D : mlo_construct_activ_lrn_pooling_common
         _pooling_method = MLO_POOLING_OP_MAX;
         _index_type     = miopenIndexUint8;
         _wsp_index      = miopenPoolingWorkspaceIndexMask;
-        _NAN_option     = 0;
+        _nan_option     = 0;
     }
 
     inline void
@@ -640,7 +641,7 @@ struct mlo_construct_pooling2D : mlo_construct_activ_lrn_pooling_common
         _search_params.kernel_size_w   = windowWidth;
         _search_params.kernel_stride_h = stride_h;
         _search_params.kernel_stride_w = stride_w;
-        _NAN_option                    = NAN_opt;
+        _nan_option                    = NAN_opt;
     }
 
     inline void getPoolingDescr(int& /*pooling_method*/,
@@ -662,7 +663,7 @@ struct mlo_construct_pooling2D : mlo_construct_activ_lrn_pooling_common
         windowWidth  = _search_params.kernel_size_w;
         stride_h     = _search_params.kernel_stride_h;
         stride_w     = _search_params.kernel_stride_w;
-        NAN_opt      = _NAN_option;
+        NAN_opt      = _nan_option;
     }
 
     inline int getPoolingMethod() const { return (_pooling_method); }
@@ -672,7 +673,7 @@ struct mlo_construct_pooling2D : mlo_construct_activ_lrn_pooling_common
     int _pooling_method;
     miopenIndexType_t _index_type;
     miopenPoolingWorkspaceIndexMode_t _wsp_index;
-    int _NAN_option; // NOLINT (bugprone-reserved-identifier)
+    int _nan_option;
     int mloConstructFwd();
     int mloConstructBwd();
 };
