@@ -860,8 +860,8 @@ ConvSolution ConvAsmImplicitGemmGTCDynamicFwdXdlopsNHWC::GetSolution(
     kernel.l_wk.push_back(1);
     kernel.l_wk.push_back(1);
 
-    const auto isGfx90aFp16altSupport = 0;
-        //(ctx.GetStream().GetDeviceName() == "gfx90a") && ctx.conv_problem.IsFp16();
+    const auto isGfx90aFp16altSupport = 
+        (ctx.GetStream().GetDeviceName() == "gfx90a") && ctx.conv_problem.IsFp16();
 
     const auto is_nchw = ctx.IsLayoutDefault();
 
@@ -880,7 +880,7 @@ ConvSolution ConvAsmImplicitGemmGTCDynamicFwdXdlopsNHWC::GetSolution(
     {
         result.construction_params.push_back(kernel);
         std::ostringstream opts_1(options.str(), std::ios_base::ate);
-        GenerateClangDefsym(opts_1, "igemm_fwd_fp16_alt_impl", 1);
+        GenerateClangDefsym(opts_1, "igemm_fwd_fp16_alt_impl", 0);
         result.construction_params[1].comp_options = opts_1.str();
         if(miopen::IsLogging(LoggingLevel::Info2))
             msg << ", fp16_alt:" << ctx.conv_problem.GetConv().attribute.gfx90aFp16alt.GetFwd();
