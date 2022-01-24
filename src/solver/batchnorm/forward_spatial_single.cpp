@@ -92,6 +92,7 @@ BnFwdTrainingSpatialSingle::GetSolution(const ExecutionContext& context,
                                         const miopen::batchnorm::ProblemDescription& problem) const
 {
     const auto& handle = context.GetStream();
+    const unsigned wavesize = (miopen::StartsWith(handle.GetDeviceName(),"gfx10") ? 32 : 64);
 
     bool bfpmixparm = false;
     bool bfp16parm  = false;
@@ -129,7 +130,7 @@ BnFwdTrainingSpatialSingle::GetSolution(const ExecutionContext& context,
     size_t ygridsize = 1;
 
     int variant           = 1;
-    unsigned int ldsgcn   = xlocalsize / 64;
+    unsigned int ldsgcn   = xlocalsize / wavesize;
     unsigned int ldsnogcn = xlocalsize;
 
     if(!problem.IsLayoutNHWC())
@@ -142,7 +143,7 @@ BnFwdTrainingSpatialSingle::GetSolution(const ExecutionContext& context,
             xgridsize  = c * xlocalsize;
             ylocalsize = 1;
             ygridsize  = 1;
-            ldsgcn     = xlocalsize / 64;
+            ldsgcn     = xlocalsize / wavesize;
             ldsnogcn   = xlocalsize;
         }
         else
@@ -167,7 +168,7 @@ BnFwdTrainingSpatialSingle::GetSolution(const ExecutionContext& context,
                 auto segment = int(std::ceil(double(in_cstride) / double(ylocalsize)));
                 xgridsize    = c;
                 ygridsize    = segment * ylocalsize;
-                ldsgcn       = ylocalsize / 64;
+                ldsgcn       = ylocalsize / wavesize;
                 ldsnogcn     = ylocalsize;
             }
             // clang-format on
@@ -180,7 +181,7 @@ BnFwdTrainingSpatialSingle::GetSolution(const ExecutionContext& context,
                 auto segment = int(std::ceil(double(in_cstride) / double(ylocalsize)));
                 xgridsize    = c;
                 ygridsize    = segment * ylocalsize;
-                ldsgcn       = ylocalsize / 64;
+                ldsgcn       = ylocalsize / wavesize;
                 ldsnogcn     = ylocalsize;
             }
         }
@@ -207,6 +208,7 @@ BnFwdTrainingSpatialSingle::GetSolution(const ExecutionContext& context,
             {"MIO_BN_LDS_SIZE", ldsnogcn},
             {"MIO_BN_LDSGCN_SIZE", std::to_string(ldsgcn)},
             {"MIO_BN_N", n},
+            {"MIO_WAVESIZE", wavesize},
             {"MIO_BN_GRP0", xlocalsize},
             {"MIO_BN_GRP1", ylocalsize},
             {"MIO_BN_GRP2", zlocalsize},

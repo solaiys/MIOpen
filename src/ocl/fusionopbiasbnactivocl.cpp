@@ -272,6 +272,7 @@ BatchNormInferenceFusionOpDescriptor::GetGlobalWGSz(Handle& /*handle*/,
 // BN Bwd Training start
 void BatchNormBwdTrainFusionOpDescriptor::calcBNParams(Handle& handle,
                                                        std::vector<size_t> in_lens,
+                                                       const unsigned wavesize,
                                                        int& variant,
                                                        size_t& in_cstride,
                                                        size_t& in_nstride,
@@ -294,7 +295,7 @@ void BatchNormBwdTrainFusionOpDescriptor::calcBNParams(Handle& handle,
 
     if(mode == miopenBNSpatial)
     {
-        ldsgcn   = xlocalsize / 64;
+        ldsgcn   = xlocalsize / wavesize;
         ldsnogcn = xlocalsize;
         if(in_cstride > 1024)
         {
@@ -323,8 +324,10 @@ miopenStatus_t BatchNormBwdTrainFusionOpDescriptor::GetNetworkConfig(std::string
     std::tie(xgridsize, ygridsize, zgridsize) = tien<3>(GetGlobalWGSz(handle, ""));
     unsigned int ldsgcn                       = 0;
     unsigned int ldsnogcn                     = 0;
+    const unsigned wavesize = (miopen::StartsWith(handle.GetDeviceName(),"gfx10") ? 32 : 64);
     calcBNParams(handle,
                  input_desc.GetLengths(),
+                 wavesize,
                  variant,
                  in_cstride,
                  in_nstride,
@@ -362,8 +365,10 @@ miopenStatus_t BatchNormBwdTrainFusionOpDescriptor::GetCompileParms(
     std::tie(xgridsize, ygridsize, zgridsize) = tien<3>(GetGlobalWGSz(handle, ""));
     unsigned int ldsgcn                       = 0;
     unsigned int ldsnogcn                     = 0;
+    const unsigned wavesize = (miopen::StartsWith(handle.GetDeviceName(),"gfx10") ? 32 : 64);
     calcBNParams(handle,
                  input_desc.GetLengths(),
+                 wavesize,
                  variant,
                  in_cstride,
                  in_nstride,
@@ -384,6 +389,7 @@ miopenStatus_t BatchNormBwdTrainFusionOpDescriptor::GetCompileParms(
            " -DMIO_BN_NHW=" + std::to_string(n * h * w) +
            " -DMIO_BN_CHW=" + std::to_string(in_nstride) +
            " -DMIO_BN_NCHW=" + std::to_string(in_nchw) +
+           " -DMIO_WAVESIZE=" + std::to_string(wavesize) +
            " -DMIO_BN_GRP0=" + std::to_string(xlocalsize) +
            " -DMIO_BN_GRP1=" + std::to_string(ylocalsize) +
            " -DMIO_BN_GRP2=" + std::to_string(zlocalsize) +
@@ -400,7 +406,7 @@ miopenStatus_t BatchNormBwdTrainFusionOpDescriptor::GetCompileParms(
 }
 
 std::vector<size_t>
-BatchNormBwdTrainFusionOpDescriptor::GetLocalWGSz(Handle& /*handle*/,
+BatchNormBwdTrainFusionOpDescriptor::GetLocalWGSz(Handle& handle,
                                                   std::string /*algorithm_name*/)
 {
     size_t xlocalsize, ylocalsize, zlocalsize;
@@ -411,12 +417,13 @@ BatchNormBwdTrainFusionOpDescriptor::GetLocalWGSz(Handle& /*handle*/,
     xlocalsize = 1;
     ylocalsize = 1;
     zlocalsize = 1;
+    const unsigned wavesize = (miopen::StartsWith(handle.GetDeviceName(),"gfx10") ? 32 : 64);
 
     if(mode == miopenBNSpatial)
     {
         if(in_cstride <= 1024 && in_cstride > 512)
         {
-            xlocalsize = std::min(64 * ((in_cstride + 63) / 64), static_cast<unsigned long>(1024));
+            xlocalsize = std::min(wavesize * ((in_cstride + wavesize - 1) / wavesize), static_cast<unsigned long>(1024));
         }
         else
         {
@@ -425,7 +432,7 @@ BatchNormBwdTrainFusionOpDescriptor::GetLocalWGSz(Handle& /*handle*/,
     }
     else
     {
-        ylocalsize = (64 >= in_cstride) ? 64 : 256;
+        ylocalsize = (wavesize >= in_cstride) ? wavesize : 256;
     }
     return {xlocalsize, ylocalsize, zlocalsize};
 }
@@ -471,6 +478,7 @@ std::vector<size_t> BatchNormBwdTrainFusionOpDescriptor::GetGlobalWGSz(Handle& h
 
 void BatchNormFwdTrainFusionOpDescriptor::calcBNParams(Handle& handle,
                                                        std::vector<size_t> in_lens,
+                                                       const unsigned wavesize,
                                                        int& variant,
                                                        size_t& in_cstride,
                                                        size_t& in_nstride,
@@ -489,7 +497,7 @@ void BatchNormFwdTrainFusionOpDescriptor::calcBNParams(Handle& handle,
     in_nstride           = c * in_cstride;
     in_nchw              = n * in_nstride;
 
-    ldsgcn   = xlocalsize / 64;
+    ldsgcn   = xlocalsize / wavesize;
     ldsnogcn = xlocalsize;
 
     variant = 0;
@@ -521,8 +529,10 @@ miopenStatus_t BatchNormFwdTrainFusionOpDescriptor::GetNetworkConfig(std::string
     size_t zgridsize, ygridsize, xgridsize;
     std::tie(xgridsize, ygridsize, zgridsize) = tien<3>(GetGlobalWGSz(handle, ""));
     unsigned int ldsgcn, ldsnogcn;
+    const unsigned wavesize = (miopen::StartsWith(handle.GetDeviceName(),"gfx10") ? 32 : 64);
     calcBNParams(handle,
                  input_desc.GetLengths(),
+                 wavesize,
                  variant,
                  in_cstride,
                  in_nstride,
@@ -562,8 +572,10 @@ miopenStatus_t BatchNormFwdTrainFusionOpDescriptor::GetCompileParms(
     size_t zgridsize, ygridsize, xgridsize;
     std::tie(xgridsize, ygridsize, zgridsize) = tien<3>(GetGlobalWGSz(handle, ""));
     unsigned int ldsgcn, ldsnogcn;
+    const unsigned wavesize = (miopen::StartsWith(handle.GetDeviceName(),"gfx10") ? 32 : 64);
     calcBNParams(handle,
                  input_desc.GetLengths(),
+                 wavesize,
                  variant,
                  in_cstride,
                  in_nstride,
@@ -598,6 +610,7 @@ miopenStatus_t BatchNormFwdTrainFusionOpDescriptor::GetCompileParms(
            " -DMIO_BN_NHW=" + std::to_string(n * h * w) +
            " -DMIO_BN_CHW=" + std::to_string(in_nstride) +
            " -DMIO_BN_NCHW=" + std::to_string(in_nchw) +
+           " -DMIO_WAVESIZE=" + std::to_string(wavesize) +
            " -DMIO_BN_GRP0=" + std::to_string(xlocalsize) +
            " -DMIO_BN_GRP1=" + std::to_string(ylocalsize) +
            " -DMIO_BN_GRP2=" + std::to_string(zlocalsize) +
@@ -615,7 +628,7 @@ miopenStatus_t BatchNormFwdTrainFusionOpDescriptor::GetCompileParms(
 }
 
 std::vector<size_t>
-BatchNormFwdTrainFusionOpDescriptor::GetLocalWGSz(Handle& /*handle*/,
+BatchNormFwdTrainFusionOpDescriptor::GetLocalWGSz(Handle& handle,
                                                   std::string /*algorithm_name*/)
 {
     size_t xlocalsize, ylocalsize, zlocalsize;
@@ -626,12 +639,13 @@ BatchNormFwdTrainFusionOpDescriptor::GetLocalWGSz(Handle& /*handle*/,
     xlocalsize = 1024;
     ylocalsize = 1;
     zlocalsize = 1;
+    const unsigned wavesize = (miopen::StartsWith(handle.GetDeviceName(),"gfx10") ? 32 : 64);
 
     if(mode == miopenBNSpatial)
     {
         if((in_cstride <= 1024) && (in_cstride > 512))
         {
-            xlocalsize = 64 * ((in_cstride + 63) / 64);
+            xlocalsize = wavesize * ((in_cstride + wavesize - 1) / wavesize);
         }
     }
     else

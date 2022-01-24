@@ -137,7 +137,7 @@ static inline void gcn_reduce2(_FLOAT_ACCUM* x,
 {
     unsigned int ldsidx = lid >> 6;
     dpp_interleaved_reduction(x, y);
-    if((lid % 64) == 63)
+    if((lid % MIO_WAVESIZE) == (MIO_WAVESIZE - 1))
     {
         lcl_data_x[ldsidx] = *x;
         lcl_data_y[ldsidx] = *y;

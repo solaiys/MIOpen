@@ -671,7 +671,7 @@ MIOpenBatchNormBwdSpatialFinalMeanVariance(__global _FLOAT* __restrict meanvarbu
     local _FLOAT_ACCUM lcl_data_y[MIO_BN_LDS_SIZE];
     lds_reduce2(&mean, &variance, (_FLOAT_ACCUM)INHW, lcl_data_x, lcl_data_y, lid);
 #else
-    commitID = 64;
+    commitID = MIO_WAVESIZE;
     local _FLOAT_ACCUM lcl_data_x[MIO_BN_LDSGCN_SIZE];
     local _FLOAT_ACCUM lcl_data_y[MIO_BN_LDSGCN_SIZE];
     gcn_reduce2(&mean, &variance, (_FLOAT_ACCUM)INHW, lcl_data_x, lcl_data_y, lid);

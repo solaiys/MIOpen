@@ -220,6 +220,7 @@ struct BatchNormFwdTrainFusionOpDescriptor : FusionOpDescriptor
     std::vector<size_t> GetGlobalWGSz(Handle& handle, std::string algorithm_name) override;
     void calcBNParams(Handle& handle,
                       std::vector<size_t> in_lens,
+                      unsigned wavesize,
                       int& variant,
                       size_t& in_cstride,
                       size_t& in_nstride,
@@ -260,6 +261,7 @@ struct BatchNormBwdTrainFusionOpDescriptor : FusionOpDescriptor
     std::vector<size_t> GetGlobalWGSz(Handle& handle, std::string algorithm_name) override;
     void calcBNParams(Handle& handle,
                       std::vector<size_t> in_lens,
+                      unsigned wavesize,
                       int& variant,
                       size_t& in_cstride,
                       size_t& in_nstride,
