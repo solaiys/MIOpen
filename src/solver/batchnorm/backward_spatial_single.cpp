@@ -138,18 +138,9 @@ BnBwdTrainingSpatialSingle::GetSolution(const ExecutionContext& context,
         //*************************************************************************************************
         else if(in_nhw < (32 * 1024 * 1024) && in_cstride > 512)
         {
-            variant    = (n >= 32) ? 1 : 3;
-            xlocalsize = 1024;
-            xgridsize  = c * xlocalsize;
-            ldsgcn     = xlocalsize / wavesize;
-            ldsnogcn   = xlocalsize;
-        }
-        else
-        {
-            variant = 0;
-            if(bfp32parm)
+            if((n > 64) && (in_cstride > 160))
             {
-                variant    = 3;
+                variant    = (n >= 32) ? 1 : 3;
                 xlocalsize = 1024;
                 xgridsize  = c * xlocalsize;
                 ldsgcn     = xlocalsize / wavesize;
@@ -157,14 +148,26 @@ BnBwdTrainingSpatialSingle::GetSolution(const ExecutionContext& context,
             }
             else
             {
-                variant    = 0;
-                xlocalsize = 1024;
-                xgridsize  = 1024 * c;
-                ldsgcn     = xlocalsize / wavesize;
-                ldsnogcn   = xlocalsize;
+                variant = 0;
+                if(bfp32parm)
+                {
+                    variant    = 3;
+                    xlocalsize = 1024;
+                    xgridsize  = c * xlocalsize;
+                    ldsgcn     = xlocalsize / wavesize;
+                    ldsnogcn   = xlocalsize;
+                }
+                else
+                {
+                    variant    = 0;
+                    xlocalsize = 1024;
+                    xgridsize  = 1024 * c;
+                    ldsgcn     = xlocalsize / wavesize;
+                    ldsnogcn   = xlocalsize;
+                }
+                ldsgcn   = xlocalsize / 64;
+                ldsnogcn = xlocalsize;
             }
-            ldsgcn   = xlocalsize / 64;
-            ldsnogcn = xlocalsize;
         }
         //*************************************************************************************************
         // N*H*W > 32M, use batchnorm variant#2 implementation which parallelize
