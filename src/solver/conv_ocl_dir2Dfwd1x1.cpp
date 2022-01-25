@@ -29,7 +29,6 @@
 #include <miopen/solver.hpp>
 #include <miopen/env.hpp>
 #include <miopen/conv/invokers/gen_x_w_y_pad.hpp>
-#include <miopen/stringutils.hpp>
 
 #define WORKAROUND_SWDEV_271887 1
 
@@ -40,13 +39,15 @@ namespace solver {
 
 bool ConvOclDirectFwd1x1::IsApplicable(const ConvolutionContext& params) const
 {
-#if WORKAROUND_SWDEV_271887 || WORKAROUND_SWDEV_292187
-    if(StartsWith(params.GetStream().GetDeviceName(), "gfx10"))
-        if(!miopen::IsEnabled(MIOPEN_DEBUG_CONV_DIRECT_OCL_FWD1X1{}))
-            return false;
-#endif
+    const auto name = params.GetStream().GetDeviceName();
     if(miopen::IsDisabled(MIOPEN_DEBUG_CONV_DIRECT_OCL_FWD1X1{}))
         return false;
+
+#if WORKAROUND_SWDEV_271887
+    if(name.find("gfx10") != std::string::npos)
+        return false;
+#endif
+
     if(!params.use_opencl_convolutions)
         return false;
     if(!params.Is2d())
