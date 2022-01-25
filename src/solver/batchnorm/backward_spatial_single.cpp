@@ -60,7 +60,8 @@ ConvSolution
 BnBwdTrainingSpatialSingle::GetSolution(const ExecutionContext& context,
                                         const miopen::batchnorm::ProblemDescription& problem) const
 {
-    const auto& handle = context.GetStream();
+    const auto& handle      = context.GetStream();
+    const unsigned wavesize = (miopen::StartsWith(handle.GetDeviceName(), "gfx10") ? 32 : 64);
 
     bool bfpmixparm = false;
     bool bfp16parm  = false;
@@ -108,7 +109,7 @@ BnBwdTrainingSpatialSingle::GetSolution(const ExecutionContext& context,
         variant    = 1;
         xlocalsize = 1024;
         xgridsize  = c * xlocalsize;
-        ldsgcn     = xlocalsize / 64;
+        ldsgcn     = xlocalsize / wavesize;
         ldsnogcn   = xlocalsize;
     }
     //*************************************************************************************************
@@ -118,24 +119,29 @@ BnBwdTrainingSpatialSingle::GetSolution(const ExecutionContext& context,
     //*************************************************************************************************
     else if(in_nhw < (32 * 1024 * 1024) && in_cstride > 512)
     {
-        variant    = (n >= 32) ? 1 : 3;
-        xlocalsize = std::min(64 * ((in_cstride + 63) / 64), static_cast<unsigned int>(1024));
-        xgridsize  = c * xlocalsize;
-        ldsgcn     = xlocalsize / 64;
-        ldsnogcn   = xlocalsize;
-    }
-    //*************************************************************************************************
-    // H*W < 512  use batchnorm variant#0 or variant#3 implementation based on batch size and
-    // H*W
-    //*************************************************************************************************
-    else if(in_cstride <= 512)
-    {
-        if((n > 64) && (in_cstride > 160))
+        //*************************************************************************************************
+        // N*H*W < 32M and H*W > 1024, use batchnorm variant#1 implementation which parallelize
+        // work groups over channels and loop through NHW.
+        //*************************************************************************************************
+        if((in_nhw < (32 * 1024 * 1024) && in_cstride > 1024))
+        {
+            variant    = 1;
+            xlocalsize = 1024;
+            xgridsize  = c * xlocalsize;
+            ldsgcn     = xlocalsize / wavesize;
+            ldsnogcn   = xlocalsize;
+        }
+        //*************************************************************************************************
+        // N*H*W < 32M and H*W > 512  use batchnorm variant#1 or variant#3 implementation which
+        // parallelize
+        // work groups over channels and loop through N.
+        //*************************************************************************************************
+        else if(in_nhw < (32 * 1024 * 1024) && in_cstride > 512)
         {
             variant    = (n >= 32) ? 1 : 3;
             xlocalsize = 1024;
             xgridsize  = c * xlocalsize;
-            ldsgcn     = xlocalsize / 64;
+            ldsgcn     = xlocalsize / wavesize;
             ldsnogcn   = xlocalsize;
         }
         else
@@ -146,18 +152,41 @@ BnBwdTrainingSpatialSingle::GetSolution(const ExecutionContext& context,
                 variant    = 3;
                 xlocalsize = 1024;
                 xgridsize  = c * xlocalsize;
-                ldsgcn     = xlocalsize / 64;
+                ldsgcn     = xlocalsize / wavesize;
                 ldsnogcn   = xlocalsize;
             }
             else
             {
                 variant    = 0;
                 xlocalsize = 1024;
-                ldsgcn     = xlocalsize / 64;
+                xgridsize  = 1024 * c;
+                ldsgcn     = xlocalsize / wavesize;
                 ldsnogcn   = xlocalsize;
             }
             ldsgcn   = xlocalsize / 64;
             ldsnogcn = xlocalsize;
+        }
+        //*************************************************************************************************
+        // N*H*W > 32M, use batchnorm variant#2 implementation which parallelize
+        // work groups over channels and data segments.
+        //*************************************************************************************************
+        else
+        {
+            variant      = 2;
+            ylocalsize   = 1024;
+            auto segment = int(std::ceil(double(in_cstride) / double(ylocalsize)));
+            xgridsize    = c;
+            ygridsize    = segment * ylocalsize;
+            ldsgcn       = ylocalsize / wavesize;
+            ldsnogcn     = ylocalsize;
+        }
+        if((in_cstride < 200) && (in_cstride > 60) && bfpmixparm)
+        {
+            variant    = 1;
+            xlocalsize = 1024;
+            xgridsize  = c * xlocalsize;
+            ldsgcn     = xlocalsize / wavesize;
+            ldsnogcn   = xlocalsize;
         }
     }
     //*************************************************************************************************
@@ -205,6 +234,7 @@ BnBwdTrainingSpatialSingle::GetSolution(const ExecutionContext& context,
             {"MIO_BN_LDS_SIZE", ldsnogcn},
             {"MIO_BN_LDSGCN_SIZE", ldsgcn},
             {"MIO_BN_VARIANT", variant},
+            {"MIO_WAVESIZE", wavesize},
             {"MIO_BN_GRP0", xlocalsize},
             {"MIO_BN_GRP1", ylocalsize},
             {"MIO_BN_GRP2", zlocalsize},
