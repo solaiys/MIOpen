@@ -133,17 +133,26 @@ BnBwdTrainingSpatialSingle::GetSolution(const ExecutionContext& context,
         if((n > 64) && (in_cstride > 160))
         {
             variant    = 3;
-            xlocalsize = 1024;
+            xlocalsize = std::min(64 * ((in_cstride + 63) / 64), static_cast<unsigned int>(1024));
             xgridsize  = c * xlocalsize;
             ldsgcn     = xlocalsize / 64;
             ldsnogcn   = xlocalsize;
         }
         else
         {
-            variant    = 0;
-            xlocalsize = 1024;
-            ldsgcn     = xlocalsize / 64;
-            ldsnogcn   = xlocalsize;
+            variant = 0;
+            if(bfp32parm)
+            {
+                xlocalsize = 1024;
+                xgridsize  = 1024 * c;
+            }
+            else
+            {
+                xlocalsize = 256;
+                xgridsize  = 256 * c;
+            }
+            ldsgcn   = xlocalsize / 64;
+            ldsnogcn = xlocalsize;
         }
     }
     //*************************************************************************************************
