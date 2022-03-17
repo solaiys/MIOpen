@@ -451,9 +451,13 @@ enable_clang_tidy(
         *
         -abseil-*
         -altera-struct-pack-align
+        # TODO Code Quality
+        -altera-id-dependent-backward-branch
         -altera-unroll-loops
         -android-cloexec-fopen
         -bugprone-exception-escape
+        # TODO Code Quality
+        -bugprone-easily-swappable-parameters
         -bugprone-macro-parentheses
         # too many narrowing conversions in our code
         -bugprone-narrowing-conversions
@@ -530,6 +534,9 @@ enable_clang_tidy(
         -readability-else-after-return
         # we are not ready to use it, but very useful
         -readability-function-cognitive-complexity
+        # too many short variable names in our code
+        # TODO Code Quality
+        -readability-identifier-length
         -readability-isolate-declaration
         -readability-magic-numbers
         -readability-named-parameter
