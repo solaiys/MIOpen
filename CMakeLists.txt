@@ -543,6 +543,13 @@ enable_clang_tidy(
         -readability-qualified-auto
         -readability-redundant-string-init
         -readability-uppercase-literal-suffix
+        #TODO Code Quality ROCm 5.0.2 update
+        -readability-container-data-pointer
+        -bugprone-implicit-widening-of-multiplication-result
+        -cert-err33-c
+        -performance-unnecessary-copy-initialization
+        -hicpp-use-emplace
+        -readability-suspicious-call-argument
 
         ${MIOPEN_TIDY_CHECKS}
     ${MIOPEN_TIDY_ERRORS}
