@@ -70,6 +70,9 @@ function(generate_embed_source EMBED_NAME)
         list(GET PARSE_OBJECTS ${idx} OBJECT)
         set(START_SYMBOL "binary_${SYMBOL}_start")
         set(END_SYMBOL "binary_${SYMBOL}_end")
+        #TODO Code Quality WORKAROUND ROCm 5.0.2 update
+        string(REGEX REPLACE "_______" "_" START_SYMBOL "${START_SYMBOL}")
+        string(REGEX REPLACE "_______" "_" END_SYMBOL "${END_SYMBOL}")
         string(APPEND EXTERNS "
             extern const char ${START_SYMBOL}[];
             extern const char ${END_SYMBOL}[];
